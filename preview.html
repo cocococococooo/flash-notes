@@ -201,42 +201,30 @@
   }
   .hero p { font-size: 14px; color: var(--text-tertiary); margin-top: 8px; line-height: 1.6; }
 
-  /* 3D Carousel — CSS 3D Transform */
-  .carousel-section { padding: 0 0 24px; }
-  .carousel-3d-wrap {
-    width: 100%; height: 260px;
-    display: flex; align-items: center; justify-content: center;
-    perspective: 478.847px; overflow: hidden; cursor: default;
-    user-select: none;
+  /* Static Card Carousel — Framer style */
+  .carousel-section {
+    position: relative; width: 100%; height: 280px;
+    overflow: visible; touch-action: pan-y; user-select: none;
   }
-  .carousel-3d-track {
-    position: relative; width: 279.941px; height: 235.74px;
-    transform-style: preserve-3d;
+  .carousel-stack {
+    position: relative; width: 100%; height: 100%; overflow: visible;
   }
-  .carousel-3d-track .c3d-item {
-    position: absolute; width: 279.941px; height: 235.74px;
-    left: 0; top: 0;
-    transform-style: preserve-3d;
+  .carousel-stack .cs-card {
+    position: absolute; left: 50%; top: 50%;
+    width: 200px; height: 200px;
+    margin-left: -100px; margin-top: -100px;
+    transform-origin: center center;
+    cursor: pointer; overflow: hidden; border-radius: 30px;
+    box-sizing: border-box; outline: none; will-change: transform;
     backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-    will-change: transform;
   }
-  .carousel-3d-track .c3d-card {
-    width: 100%; height: 100%; border-radius: 8.84025px; overflow: hidden;
-    box-shadow: none;
-    will-change: transform;
+  .carousel-stack .cs-card img {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; object-position: center; display: block; user-select: none;
   }
-  .carousel-3d-track .c3d-card img {
-    width: 100%; height: 100%; object-fit: cover; display: block;
-    will-change: transform;
-  }
-  .carousel-3d-track .c3d-card img {
-    width: 100%; height: 100%; object-fit: cover; display: block;
-  }
-  .carousel-counter {
-    text-align: center; font-size: 12px; color: var(--text-tertiary);
-    font-family: "Inter", sans-serif; margin-top: 8px;
-    font-weight: 500; letter-spacing: 1px;
+  .carousel-stack .cs-card .cs-overlay {
+    position: absolute; inset: 0;
+    background: rgb(0, 0, 0); transition: opacity 0.5s ease;
   }
 
   /* Import button (below carousel) */
@@ -665,12 +653,9 @@
           <p class="fade-in" style="animation-delay:0.15s">导入截图，AI 自动生成结构化笔记</p>
         </div>
 
-        <!-- 3D Carousel -->
+        <!-- Static Card Carousel -->
         <div class="carousel-section">
-          <div class="carousel-3d-wrap">
-            <div class="carousel-3d-track" id="carouselTrack"></div>
-          </div>
-          <div class="carousel-counter" id="carouselCounter">1 / 10</div>
+          <div class="carousel-stack" id="carouselStack"></div>
         </div>
 
         <div class="import-section">
@@ -787,13 +772,8 @@ function initIcons() {
   });
 }
 
-// ===================== 3D CSS TRANSFORM CAROUSEL =====================
+// ===================== STATIC CARD CAROUSEL =====================
 const carouselItems = [
-  { src: 'pic/0444fef320f4e1569a1c5026d74093ac.jpg' },
-  { src: 'pic/0f263c438ec4c0ee88934537c7188826.jpg' },
-  { src: 'pic/b40e7364bff07dff7d5999c19ce48ee3.jpg' },
-  { src: 'pic/c5fcfe8eed43182cb9112022457cbd2f.jpg' },
-  { src: 'pic/e1b59ad3b2b1815b4ea7bc1f55a228cd.jpg' },
   { src: 'pic/0444fef320f4e1569a1c5026d74093ac.jpg' },
   { src: 'pic/0f263c438ec4c0ee88934537c7188826.jpg' },
   { src: 'pic/b40e7364bff07dff7d5999c19ce48ee3.jpg' },
@@ -801,43 +781,34 @@ const carouselItems = [
   { src: 'pic/e1b59ad3b2b1815b4ea7bc1f55a228cd.jpg' },
 ];
 
-let carouselAngle = 0;
-let lastTime = 0;
-const SPEED = 0.04; // radians per second
-
 function buildCarousel() {
-  const track = document.getElementById('carouselTrack');
+  const stack = document.getElementById('carouselStack');
   const n = carouselItems.length;
+  const positions = [
+    { x: -250, scale: 0.65, opacity: 0.4, z: 2, border: 3 },
+    { x: -130, scale: 0.8, opacity: 1, z: 3, border: 3 },
+    { x: 0, scale: 0.95, opacity: 1, z: 5, border: 6 },
+    { x: 130, scale: 0.8, opacity: 1, z: 3, border: 3 },
+    { x: 250, scale: 0.65, opacity: 0.4, z: 2, border: 3 },
+  ];
   let html = '';
   for (let i = 0; i < n; i++) {
-    const angle = (i / n) * 360;
-    html += `<div class="c3d-item" style="transform:rotateY(${angle}deg) translateZ(-456.746px);">
-      <div class="c3d-card"><img src="${carouselItems[i].src}" alt="" /></div>
+    const p = positions[i];
+    const borderColor = i === 2 ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.5)';
+    const shadow = i === 2
+      ? 'rgba(0,0,0,0.11) 0px 28px 80px, rgba(0,0,0,0.067) 0px 10px 28px'
+      : 'rgba(0,0,0,0.035) 0px 6px 18px';
+    html += `<div class="cs-card" style="
+      transform:translateX(${p.x}px) scale(${p.scale});
+      opacity:${p.opacity};z-index:${p.z};
+      border:${p.border}px solid ${borderColor};
+      box-shadow:${shadow};
+    ">
+      <img src="${carouselItems[i].src}" alt="" draggable="false" />
+      <div class="cs-overlay" style="opacity:${i === 2 ? 0.2 : 0.13}"></div>
     </div>`;
   }
-  track.innerHTML = html;
-}
-
-function animateCarousel(time) {
-  if (!lastTime) lastTime = time;
-  const dt = (time - lastTime) / 1000;
-  lastTime = time;
-
-  carouselAngle += SPEED * dt * (180 / Math.PI);
-  const track = document.getElementById('carouselTrack');
-  if (!track) { requestAnimationFrame(animateCarousel); return; }
-  track.style.transform = `rotateY(${carouselAngle}deg)`;
-
-  const n = carouselItems.length;
-  const idx = Math.round(((carouselAngle % 360) + 360) % 360 / (360 / n)) % n;
-  document.getElementById('carouselCounter').textContent = `${idx + 1} / ${n}`;
-
-  requestAnimationFrame(animateCarousel);
-}
-
-function startCarousel() {
-  buildCarousel();
-  requestAnimationFrame(animateCarousel);
+  stack.innerHTML = html;
 }
 
 // ===================== INIT =====================
@@ -889,7 +860,7 @@ function startCarousel() {
 
   currentProjectId = 1001;
   renderProjects();
-  startCarousel();
+  buildCarousel();
   renderNotes();
   updateNoteCount();
 })();
