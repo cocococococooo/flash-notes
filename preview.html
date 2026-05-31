@@ -591,10 +591,6 @@
   .nd-card .nd-body {
     padding: 20px;
   }
-  .nd-card .nd-quote-icon {
-    font-size: 32px; font-weight: 700; line-height: 1;
-    margin-bottom: 8px; font-family: Georgia, serif;
-  }
   .nd-card .nd-text {
     font-size: 14px; color: var(--text-primary); line-height: 1.6;
     outline: none; cursor: text; border-radius: 6px; padding: 4px;
@@ -1338,7 +1334,6 @@ function openNoteDetail(projectId) {
       html += `<div class="nd-card" data-index="${i}" style="${i > 0 ? 'display:none' : ''}">
         <div class="nd-image"><img src="${url}" /></div>
         <div class="nd-body">
-          <div class="nd-quote-icon">&ldquo;</div>
           <div class="nd-text" contenteditable="true" data-placeholder="在此输入文字...">${note.imageNotes && note.imageNotes[i] ? note.imageNotes[i] : ''}</div>
           <div class="nd-divider"></div>
           <div class="nd-meta">
@@ -1367,7 +1362,6 @@ function openNoteDetail(projectId) {
     html += `<div class="note-overall-notes">
       <div class="nd-card">
         <div class="nd-body">
-          <div class="nd-quote-icon">&ldquo;</div>
           <div class="nd-text" contenteditable="true" data-placeholder="整体笔记内容...">${note.notesText || ''}</div>
         </div>
       </div>
