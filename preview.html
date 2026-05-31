@@ -765,6 +765,50 @@ function initIcons() {
   });
 }
 
+// ===================== 3D AUTO CAROUSEL =====================
+const carouselItems = [
+  { src: 'pic/0444fef320f4e1569a1c5026d74093ac.jpg' },
+  { src: 'pic/0f263c438ec4c0ee88934537c7188826.jpg' },
+  { src: 'pic/b40e7364bff07dff7d5999c19ce48ee3.jpg' },
+  { src: 'pic/c5fcfe8eed43182cb9112022457cbd2f.jpg' },
+  { src: 'pic/e1b59ad3b2b1815b4ea7bc1f55a228cd.jpg' },
+];
+let carouselIdx = 0;
+
+const c3dLayout = [
+  { tx: 0, ty: -8, s: 1.0, z: 100, o: 1 },
+  { tx: 105, ty: 10, s: 0.7, z: 74, o: 0.8 },
+  { tx: 80, ty: 28, s: 0.45, z: 24, o: 0.5 },
+  { tx: -80, ty: 28, s: 0.45, z: 26, o: 0.5 },
+  { tx: -105, ty: 10, s: 0.7, z: 76, o: 0.8 },
+];
+
+function renderCarousel3d() {
+  const container = document.getElementById('carousel3d');
+  const total = carouselItems.length;
+  let html = '';
+  for (let i = 0; i < total; i++) {
+    const pos = (i - carouselIdx + total) % total;
+    const layout = c3dLayout[pos];
+    const item = carouselItems[i];
+    html += `<div class="c3d-item" style="transform:translate(${layout.tx}px,${layout.ty}px) scale(${layout.s}); z-index:${layout.z}; opacity:${layout.o};">
+      <img class="c3d-card-inner" src="${item.src}" style="width:140px;height:180px;border-radius:18px;object-fit:cover;display:block;box-shadow:0 6px 24px rgba(0,0,0,0.15);pointer-events:none;" />
+    </div>`;
+  }
+  container.innerHTML = html;
+  document.getElementById('carouselCounter').textContent = `${carouselIdx + 1} / ${total}`;
+}
+
+function carouselAutoPlay() {
+  carouselIdx = (carouselIdx + 1) % carouselItems.length;
+  renderCarousel3d();
+}
+
+function startCarousel() {
+  renderCarousel3d();
+  setInterval(carouselAutoPlay, 2500);
+}
+
 // ===================== INIT =====================
 (function init() {
   initIcons();
@@ -818,50 +862,6 @@ function initIcons() {
   renderNotes();
   updateNoteCount();
 })();
-
-// ===================== 3D AUTO CAROUSEL =====================
-const carouselItems = [
-  { src: 'pic/0444fef320f4e1569a1c5026d74093ac.jpg' },
-  { src: 'pic/0f263c438ec4c0ee88934537c7188826.jpg' },
-  { src: 'pic/b40e7364bff07dff7d5999c19ce48ee3.jpg' },
-  { src: 'pic/c5fcfe8eed43182cb9112022457cbd2f.jpg' },
-  { src: 'pic/e1b59ad3b2b1815b4ea7bc1f55a228cd.jpg' },
-];
-let carouselIdx = 0;
-
-const c3dLayout = [
-  { tx: 0, ty: -8, s: 1.0, z: 100, o: 1 },
-  { tx: 105, ty: 10, s: 0.7, z: 74, o: 0.8 },
-  { tx: 80, ty: 28, s: 0.45, z: 24, o: 0.5 },
-  { tx: -80, ty: 28, s: 0.45, z: 26, o: 0.5 },
-  { tx: -105, ty: 10, s: 0.7, z: 76, o: 0.8 },
-];
-
-function renderCarousel3d() {
-  const container = document.getElementById('carousel3d');
-  const total = carouselItems.length;
-  let html = '';
-  for (let i = 0; i < total; i++) {
-    const pos = (i - carouselIdx + total) % total;
-    const layout = c3dLayout[pos];
-    const item = carouselItems[i];
-    html += `<div class="c3d-item" style="transform:translate(${layout.tx}px,${layout.ty}px) scale(${layout.s}); z-index:${layout.z}; opacity:${layout.o};">
-      <img class="c3d-card-inner" src="${item.src}" style="width:140px;height:180px;border-radius:18px;object-fit:cover;display:block;box-shadow:0 6px 24px rgba(0,0,0,0.15);pointer-events:none;" />
-    </div>`;
-  }
-  container.innerHTML = html;
-  document.getElementById('carouselCounter').textContent = `${carouselIdx + 1} / ${total}`;
-}
-
-function carouselAutoPlay() {
-  carouselIdx = (carouselIdx + 1) % carouselItems.length;
-  renderCarousel3d();
-}
-
-function startCarousel() {
-  renderCarousel3d();
-  setInterval(carouselAutoPlay, 2500);
-}
 
 // ===================== CLOCK =====================
 function updateClock() {
