@@ -572,33 +572,84 @@
   .note-img-thumb .e { color: var(--text-tertiary); }
   .note-img-thumb .e svg { width: 36px; height: 36px; }
 
-  .note-image-grid {
-    display: flex; gap: 10px; overflow-x: auto; padding: 8px 0 16px;
-    scrollbar-width: none; flex-shrink: 0;
+  /* Note Detail Card - Reference style */
+  .nd-card {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    padding: 0;
+    margin-bottom: 16px;
+    overflow: hidden;
+    border: 1px solid var(--border);
   }
-  .note-image-grid::-webkit-scrollbar { display: none; }
-  .note-image-grid .nig-item {
-    width: 100px; height: 130px; border-radius: 10px; overflow: hidden;
-    flex-shrink: 0; border: 1.5px solid var(--border); background: #F4F4F5;
+  .nd-card .nd-image {
+    width: 100%; aspect-ratio: 4 / 3; background: #F4F4F5;
+    overflow: hidden; position: relative;
   }
-  .note-image-grid .nig-item img { width:100%; height:100%; object-fit:cover; display:block; }
-
-  .note-img-block { margin-bottom: 20px; }
-  .note-img-preview {
-    width: 100%; border-radius: var(--radius-sm); overflow: hidden;
-    background: #F4F4F5; border: 1px solid var(--border);
+  .nd-card .nd-image img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
   }
-  .note-img-preview img { width: 100%; display: block; }
-  .note-img-caption {
-    font-size: 13px; color: var(--text-secondary); line-height: 1.6;
-    padding: 10px 8px 4px; outline: none; border-radius: 6px;
-    transition: background 0.15s; cursor: text;
+  .nd-card .nd-body {
+    padding: 20px;
   }
-  .note-img-caption:focus { background: #F4F4F5; }
-  .note-img-caption:empty:before {
+  .nd-card .nd-quote-icon {
+    font-size: 32px; font-weight: 700; line-height: 1;
+    margin-bottom: 8px; font-family: Georgia, serif;
+  }
+  .nd-card .nd-text {
+    font-size: 14px; color: var(--text-primary); line-height: 1.6;
+    outline: none; cursor: text; border-radius: 6px; padding: 4px;
+    transition: background 0.15s; min-height: 24px;
+  }
+  .nd-card .nd-text:focus { background: #F4F4F5; }
+  .nd-card .nd-text:empty:before {
     content: attr(data-placeholder); color: var(--text-quaternary);
   }
-  .note-overall-notes { margin-top: 8px; }
+  .nd-card .nd-divider {
+    height: 1px; background: var(--border); margin: 16px 0;
+  }
+  .nd-card .nd-meta {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .nd-card .nd-author {
+    font-size: 12px; font-weight: 500; color: var(--text-primary);
+  }
+  .nd-card .nd-location {
+    font-size: 11px; color: var(--text-tertiary);
+  }
+  .nd-card .nd-tags {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px;
+  }
+  .nd-card .nd-tag {
+    padding: 4px 12px; border-radius: 100px;
+    font-size: 11px; font-weight: 500; cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .nd-card .nd-tag:hover { opacity: 0.7; }
+  .nd-card .nd-add-tag {
+    padding: 4px 12px; border-radius: 100px;
+    font-size: 11px; color: var(--text-tertiary);
+    border: 1px dashed var(--border);
+    cursor: pointer; transition: all 0.2s;
+  }
+  .nd-card .nd-add-tag:hover {
+    border-color: var(--text-tertiary); color: var(--text-secondary);
+  }
+
+  /* Carousel dots */
+  .nd-dots {
+    display: flex; justify-content: center; gap: 6px; padding: 12px 0;
+    position: sticky; bottom: 0; background: var(--bg);
+  }
+  .nd-dots .nd-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--text-quaternary);
+    transition: all 0.3s;
+  }
+  .nd-dots .nd-dot.active {
+    width: 18px; border-radius: 3px;
+    background: var(--accent);
+  }
+  .nd-dots.hidden { display: none; }
 
   .note-tags-section { margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--border); }
   .note-tags-label { font-size: 11px; font-weight: 600; color: var(--text-tertiary); letter-spacing: 2px; text-transform: uppercase; cursor: pointer; margin-bottom: 10px; user-select: none; }
@@ -942,6 +993,7 @@ function tagColor(tag) {
       imageCount: imgs.length,
       imageUrls: imgs.map(img => img.imgSrc || img.fileDataUrl || '').filter(Boolean),
       imageNotes: imgs.map(() => ''),
+      imageTags: imgs.map(() => []),
       notesText: '',
       updatedAt: n.date,
     };
@@ -1156,6 +1208,7 @@ function handleFilePick(event) {
           imageCount: newImages.length,
           imageUrls: newImages.map(img => img.fileDataUrl || img.imgSrc || '').filter(Boolean),
           imageNotes: newImages.map(() => ''),
+          imageTags: newImages.map(() => []),
           notesText: '',
           updatedAt: new Date().toISOString(),
         };
@@ -1265,46 +1318,140 @@ function updateNoteCount() {
 }
 
 // ===================== NOTE DETAIL =====================
+let currentImageIndex = 0;
+
 function openNoteDetail(projectId) {
   currentProjectId = projectId;
+  currentImageIndex = 0;
   const note = allNotes.find(n => n.projectId === projectId);
-  const imgs = projectImages[projectId] || [];
 
   const editor = document.getElementById('noteEditor');
   if (note) {
-    let tagList = [];
-    try { tagList = JSON.parse(note.tags); } catch(e) {}
     const imgUrls = note.imageUrls || [];
+    const tagList = (() => { try { return JSON.parse(note.tags); } catch { return []; } })();
+    const project = projects.find(p => p.id === projectId);
     let html = '';
 
-    // Each imported image as a preview card with editable caption
+    // Render each image card
     imgUrls.forEach((url, i) => {
-      html += `<div class="note-img-block">
-        <div class="note-img-preview"><img src="${url}" /></div>
-        <div class="note-img-caption" contenteditable="true" data-placeholder="添加这张图片的备注...">${note.imageNotes && note.imageNotes[i] ? note.imageNotes[i] : ''}</div>
+      const cardTags = note.imageTags && note.imageTags[i] ? note.imageTags[i] : [];
+      html += `<div class="nd-card" data-index="${i}" style="${i > 0 ? 'display:none' : ''}">
+        <div class="nd-image"><img src="${url}" /></div>
+        <div class="nd-body">
+          <div class="nd-quote-icon">&ldquo;</div>
+          <div class="nd-text" contenteditable="true" data-placeholder="在此输入文字...">${note.imageNotes && note.imageNotes[i] ? note.imageNotes[i] : ''}</div>
+          <div class="nd-divider"></div>
+          <div class="nd-meta">
+            <div class="nd-author">${project ? project.title : '项目'}</div>
+            <div class="nd-location">${new Date(note.updatedAt).toLocaleDateString('zh-CN')}</div>
+          </div>
+          <div class="nd-tags" data-img="${i}">
+            ${cardTags.map(t => {
+              const c = tagColor(t);
+              return `<span class="nd-tag" style="background:${c.bg};color:${c.text}">${t}</span>`;
+            }).join('')}
+            <span class="nd-add-tag" onclick="addImageTag(${i})">+ 标签</span>
+          </div>
+        </div>
       </div>`;
     });
 
-    // Editable text area for overall notes
-    html += `<div class="note-overall-notes">
-      <div class="note-subtitle-edit" contenteditable="true">笔记</div>
-      <div class="note-para" contenteditable="true">${note.notesText || '在此输入笔记内容...'}</div>
-    </div>`;
+    // Carousel dots (only if multiple images)
+    if (imgUrls.length > 1) {
+      html += `<div class="nd-dots" id="ndDots">
+        ${imgUrls.map((_, i) => `<div class="nd-dot${i === 0 ? ' active' : ''}"></div>`).join('')}
+      </div>`;
+    }
 
-    // Tags section
-    html += `<div class="note-tags-section">
-      <div class="note-tags-label" onclick="toggleNoteTags(this)">标签 &#9660;</div>
-      <div class="note-tags-edit">
-        <input type="text" id="noteTagsInput" value="${tagList.join(', ')}" placeholder="输入标签，用逗号分隔" />
-        <div class="note-tags-row">${tagList.map(t => { const c = tagColor(t); return `<span class="tag" style="background:${c.bg};color:${c.text}">${t}</span>`; }).join('')}</div>
+    // Overall notes section
+    html += `<div class="note-overall-notes">
+      <div class="nd-card">
+        <div class="nd-body">
+          <div class="nd-quote-icon">&ldquo;</div>
+          <div class="nd-text" contenteditable="true" data-placeholder="整体笔记内容...">${note.notesText || ''}</div>
+        </div>
       </div>
     </div>`;
+
     editor.innerHTML = html;
+
+    // Auto-show carousel if multiple images
+    if (imgUrls.length > 1) {
+      setupCarouselDrag();
+    }
   } else {
     editor.innerHTML = '<div class="note-para" style="color:#AAA;text-align:center;margin-top:40px">暂无笔记内容</div>';
   }
 
   document.getElementById('overlay-note').classList.add('open');
+}
+
+function setupCarouselDrag() {
+  const overlay = document.getElementById('overlay-note');
+  const editor = document.getElementById('noteEditor');
+  const note = allNotes.find(n => n.projectId === currentProjectId);
+  if (!note || !note.imageUrls || note.imageUrls.length <= 1) return;
+
+  let startX = 0;
+  let isDragging = false;
+
+  editor.addEventListener('touchstart', (e) => {
+    startX = e.touches[0].clientX;
+    isDragging = true;
+  }, { passive: true });
+
+  editor.addEventListener('touchend', (e) => {
+    if (!isDragging) return;
+    isDragging = false;
+    const diff = startX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) showImage(currentImageIndex + 1);
+      else showImage(currentImageIndex - 1);
+    }
+  }, { passive: true });
+}
+
+function showImage(index) {
+  const note = allNotes.find(n => n.projectId === currentProjectId);
+  if (!note || !note.imageUrls) return;
+
+  const total = note.imageUrls.length;
+  const newIndex = ((index % total) + total) % total;
+  currentImageIndex = newIndex;
+
+  // Show correct card
+  document.querySelectorAll('.nd-card[data-index]').forEach(card => {
+    card.style.display = card.dataset.index == newIndex ? '' : 'none';
+  });
+
+  // Update dots
+  document.querySelectorAll('.nd-dot').forEach((dot, i) => {
+    dot.classList.toggle('active', i === newIndex);
+  });
+}
+
+function addImageTag(imgIndex) {
+  const tag = prompt('输入标签名称');
+  if (!tag) return;
+
+  const note = allNotes.find(n => n.projectId === currentProjectId);
+  if (!note) return;
+  if (!note.imageTags) note.imageTags = [];
+  if (!note.imageTags[imgIndex]) note.imageTags[imgIndex] = [];
+
+  note.imageTags[imgIndex].push(tag.trim());
+
+  // Re-render that card's tags
+  const tagsContainer = document.querySelector(`.nd-tags[data-img="${imgIndex}"]`);
+  if (tagsContainer) {
+    const c = tagColor(tag.trim());
+    const addBtn = tagsContainer.querySelector('.nd-add-tag');
+    const span = document.createElement('span');
+    span.className = 'nd-tag';
+    span.style.cssText = `background:${c.bg};color:${c.text}`;
+    span.textContent = tag.trim();
+    tagsContainer.insertBefore(span, addBtn);
+  }
 }
 
 function generateSummary() {
@@ -1318,13 +1465,19 @@ function generateSummary() {
     note.tags = JSON.stringify(tagList);
   }
 
-  // Save image captions
-  const captions = document.querySelectorAll('.note-img-caption');
-  note.imageNotes = Array.from(captions).map(el => el.textContent.trim());
+  // Save image captions from nd-text
+  const cards = document.querySelectorAll('.nd-card[data-index]');
+  cards.forEach(card => {
+    const idx = parseInt(card.dataset.index);
+    const textEl = card.querySelector('.nd-text');
+    if (textEl && note.imageNotes) {
+      note.imageNotes[idx] = textEl.textContent.trim();
+    }
+  });
 
   // Save overall notes
-  const paras = document.querySelectorAll('.note-overall-notes .note-para');
-  note.notesText = Array.from(paras).map(el => el.textContent.trim()).join('\n');
+  const overallTexts = document.querySelectorAll('.note-overall-notes .nd-text');
+  note.notesText = Array.from(overallTexts).map(el => el.textContent.trim()).join('\n');
 
   renderNotes();
   const btn = document.querySelector('#overlay-note .o-action');
