@@ -217,6 +217,7 @@
     cursor: pointer; overflow: hidden; border-radius: 24px;
     box-sizing: border-box; outline: none; will-change: transform;
     backface-visibility: hidden;
+    transition: transform 0.5s cubic-bezier(0.4, 1.2, 0.3, 1), opacity 0.5s ease;
   }
   .carousel-stack .cs-card img {
     position: absolute; inset: 0; width: 100%; height: 100%;
@@ -772,7 +773,7 @@ function initIcons() {
   });
 }
 
-// ===================== STATIC CARD CAROUSEL =====================
+// ===================== AUTO-ROTATING CARD CAROUSEL =====================
 const carouselItems = [
   { src: 'pic/0444fef320f4e1569a1c5026d74093ac.jpg' },
   { src: 'pic/0f263c438ec4c0ee88934537c7188826.jpg' },
@@ -781,21 +782,27 @@ const carouselItems = [
   { src: 'pic/e1b59ad3b2b1815b4ea7bc1f55a228cd.jpg' },
 ];
 
-function buildCarousel() {
+const POSITIONS = [
+  { x: -130, scale: 0.6, opacity: 0.45, z: 2, border: 3 },
+  { x: -70,  scale: 0.8, opacity: 1,    z: 3, border: 3 },
+  { x: 0,    scale: 0.95, opacity: 1,   z: 5, border: 6 },
+  { x: 70,   scale: 0.8, opacity: 1,    z: 3, border: 3 },
+  { x: 130,  scale: 0.6, opacity: 0.45, z: 2, border: 3 },
+];
+
+let centerIdx = 2;
+let carouselTimer = null;
+
+function buildCarousel(idx) {
   const stack = document.getElementById('carouselStack');
   const n = carouselItems.length;
-  const positions = [
-    { x: -130, scale: 0.6, opacity: 0.45, z: 2, border: 3 },
-    { x: -70, scale: 0.8, opacity: 1, z: 3, border: 3 },
-    { x: 0, scale: 0.95, opacity: 1, z: 5, border: 6 },
-    { x: 70, scale: 0.8, opacity: 1, z: 3, border: 3 },
-    { x: 130, scale: 0.6, opacity: 0.45, z: 2, border: 3 },
-  ];
   let html = '';
   for (let i = 0; i < n; i++) {
-    const p = positions[i];
-    const borderColor = i === 2 ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.5)';
-    const shadow = i === 2
+    const offset = ((i - idx + n) % n) - 2;
+    const p = POSITIONS[offset + 2];
+    const isCenter = offset === 0;
+    const borderColor = isCenter ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.5)';
+    const shadow = isCenter
       ? 'rgba(0,0,0,0.11) 0px 28px 80px, rgba(0,0,0,0.067) 0px 10px 28px'
       : 'rgba(0,0,0,0.035) 0px 6px 18px';
     html += `<div class="cs-card" style="
@@ -805,10 +812,20 @@ function buildCarousel() {
       box-shadow:${shadow};
     ">
       <img src="${carouselItems[i].src}" alt="" draggable="false" />
-      <div class="cs-overlay" style="opacity:${i === 2 ? 0.2 : 0.13}"></div>
+      <div class="cs-overlay" style="opacity:${isCenter ? 0.2 : 0.13}"></div>
     </div>`;
   }
   stack.innerHTML = html;
+}
+
+function rotateCarousel() {
+  centerIdx = (centerIdx + 1) % carouselItems.length;
+  buildCarousel(centerIdx);
+}
+
+function startCarousel() {
+  buildCarousel(centerIdx);
+  carouselTimer = setInterval(rotateCarousel, 2000);
 }
 
 // ===================== INIT =====================
@@ -860,7 +877,7 @@ function buildCarousel() {
 
   currentProjectId = 1001;
   renderProjects();
-  buildCarousel();
+  startCarousel();
   renderNotes();
   updateNoteCount();
 })();
