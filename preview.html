@@ -202,33 +202,27 @@
   .hero p { font-size: 14px; color: var(--text-tertiary); margin-top: 8px; line-height: 1.6; }
 
   /* 3D Auto Carousel */
-  .carousel-section { padding: 0 0 20px; overflow: hidden; }
+  .carousel-section { padding: 0 0 20px; }
   .carousel-3d {
-    position: relative; width: 100%; height: 260px;
-    display: flex; align-items: center; justify-content: center;
+    position: relative; width: 280px; height: 200px;
+    margin: 0 auto;
   }
   .carousel-3d .c3d-item {
-    position: absolute; top: 50%; left: 50%;
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
     display: flex; align-items: center; justify-content: center;
-    will-change: transform;
-    transition: transform 0.8s cubic-bezier(0.4, 2, 0.3, 1), opacity 0.6s, z-index 0s;
+    transition: transform 0.7s cubic-bezier(0.4, 2, 0.3, 1), opacity 0.5s;
   }
-  .carousel-3d .c3d-card {
-    width: 150px; height: 200px; border-radius: 16px;
-    object-fit: cover; display: block; pointer-events: none;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
-  }
-  .carousel-3d .c3d-card-placeholder {
-    width: 150px; height: 200px; border-radius: 16px;
+  .carousel-3d .c3d-card-inner {
+    width: 140px; height: 180px; border-radius: 18px;
     display: flex; align-items: center; justify-content: center;
-    pointer-events: none;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.15);
     color: #FFF; font-size: 13px; font-weight: 600; letter-spacing: 1px;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    text-shadow: 0 1px 4px rgba(0,0,0,0.2);
   }
   .carousel-counter {
     text-align: center; font-size: 12px; color: var(--text-tertiary);
-    font-family: "Inter", sans-serif; margin-top: 10px;
+    font-family: "Inter", sans-serif; margin-top: 12px;
     font-weight: 500; letter-spacing: 1px;
   }
 
@@ -841,23 +835,14 @@ const carouselItems = [
   { bg: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', label: '快速检索' },
 ];
 let carouselIdx = 0;
-let carouselTimer = null;
 
-// 3D positions: [translateX, translateY, scale, z-index] — scaled for 375px phone
-// Based on Framer reference: center=0,-40,1; sides=±230,±20,0.84; far=±230,±20,0.52; bottom=0,40,0.35
-const c3dPositions = [
-  // index 0: center card (top center)
-  { tx: 3, ty: -20, s: 0.95, z: 100 },
-  // index 1: right card
-  { tx: 100, ty: 8, s: 0.72, z: 74 },
-  // index 2: far right (bottom)
-  { tx: 98, ty: 10, s: 0.45, z: 24 },
-  // index 3: bottom center
-  { tx: -3, ty: 18, s: 0.32, z: 0 },
-  // index 4: far left (bottom)
-  { tx: -98, ty: 10, s: 0.45, z: 26 },
-  // index 5: left card
-  { tx: -100, ty: 8, s: 0.72, z: 76 },
+// 3D layout: 5 positions (center, right, far-right, far-left, left)
+const c3dLayout = [
+  { tx: 0, ty: -8, s: 1.0, z: 100, o: 1 },      // center (top)
+  { tx: 105, ty: 10, s: 0.7, z: 74, o: 0.8 },    // right
+  { tx: 80, ty: 28, s: 0.45, z: 24, o: 0.5 },    // far-right (bottom)
+  { tx: -80, ty: 28, s: 0.45, z: 26, o: 0.5 },   // far-left (bottom)
+  { tx: -105, ty: 10, s: 0.7, z: 76, o: 0.8 },   // left
 ];
 
 function renderCarousel3d() {
@@ -865,17 +850,11 @@ function renderCarousel3d() {
   const total = carouselItems.length;
   let html = '';
   for (let i = 0; i < total; i++) {
-    // Calculate position relative to current index
-    let pos = (i - carouselIdx + total) % total;
-    // Map pos to 3D layout positions: 0=center, 1=right, 2=far-right, 3=bottom, 4=far-left, 5=left
-    // But we only have 5 items, so we skip bottom (pos 3)
-    const layoutMap = [0, 1, 4, 5, 2]; // center, right, far-left, left, far-right
-    const layoutIdx = layoutMap[pos] !== undefined ? layoutMap[pos] : 0;
-    const p = c3dPositions[layoutIdx];
+    const pos = (i - carouselIdx + total) % total;
+    const layout = c3dLayout[pos];
     const item = carouselItems[i];
-    const opacity = pos === 0 ? 1 : (pos === 1 || pos === 4) ? 0.75 : 0.45;
-    html += `<div class="c3d-item" style="transform:translate(-50%,-50%) translateX(${p.tx}px) translateY(${p.ty}px) scale(${p.s}); z-index:${p.z}; opacity:${opacity};">
-      <div class="c3d-card-placeholder" style="background:${item.bg};">${item.label}</div>
+    html += `<div class="c3d-item" style="transform:translate(${layout.tx}px,${layout.ty}px) scale(${layout.s}); z-index:${layout.z}; opacity:${layout.o};">
+      <div class="c3d-card-inner" style="background:${item.bg};">${item.label}</div>
     </div>`;
   }
   container.innerHTML = html;
@@ -889,7 +868,7 @@ function carouselAutoPlay() {
 
 function startCarousel() {
   renderCarousel3d();
-  carouselTimer = setInterval(carouselAutoPlay, 2500);
+  setInterval(carouselAutoPlay, 2500);
 }
 
 // ===================== CLOCK =====================
