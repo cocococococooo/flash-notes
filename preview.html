@@ -588,13 +588,25 @@
   .nd-card .nd-image img {
     width: 100%; height: 100%; object-fit: cover; display: block;
   }
+  .nd-nav-left, .nd-nav-right {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 32px; height: 32px; border-radius: 50%;
+    background: rgba(0,0,0,0.3); display: flex;
+    align-items: center; justify-content: center;
+    cursor: pointer; opacity: 0; transition: all 0.2s;
+    z-index: 2;
+  }
+  .nd-image:hover .nd-nav-left, .nd-image:hover .nd-nav-right { opacity: 1; }
+  .nd-nav-left:active, .nd-nav-right:active { background: rgba(0,0,0,0.5); }
+  .nd-nav-left { left: 8px; }
+  .nd-nav-right { right: 8px; }
   .nd-card .nd-body {
     padding: 20px;
   }
   .nd-card .nd-text {
-    font-size: 14px; color: var(--text-primary); line-height: 1.6;
-    outline: none; cursor: text; border-radius: 6px; padding: 4px;
-    transition: background 0.15s; min-height: 24px;
+    font-size: 15px; color: var(--text-primary); line-height: 1.7;
+    outline: none; cursor: text; border-radius: 6px; padding: 8px;
+    transition: background 0.15s; min-height: 80px;
   }
   .nd-card .nd-text:focus { background: #F4F4F5; }
   .nd-card .nd-text:empty:before {
@@ -1387,7 +1399,10 @@ function openNoteDetail(projectId) {
     imgUrls.forEach((url, i) => {
       const cardTags = note.imageTags && note.imageTags[i] ? note.imageTags[i] : [];
       html += `<div class="nd-card" data-index="${i}" style="${i > 0 ? 'display:none' : ''}">
-        <div class="nd-image"><img src="${url}" /></div>
+        <div class="nd-image" onclick="clickImage(event, ${i})"><img src="${url}" />
+          <div class="nd-nav-left" onclick="event.stopPropagation();showImage(${i-1})"><svg width="20" height="20" viewBox="0 0 48 48" fill="none"><path d="M30 14L18 24L30 34" stroke="#FFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div class="nd-nav-right" onclick="event.stopPropagation();showImage(${i+1})"><svg width="20" height="20" viewBox="0 0 48 48" fill="none"><path d="M18 14L30 24L18 34" stroke="#FFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        </div>
         <div class="nd-body">
           <div class="nd-text" contenteditable="true" data-placeholder="在此输入文字...">${note.imageNotes && note.imageNotes[i] ? note.imageNotes[i] : ''}</div>
           <div class="nd-divider"></div>
@@ -1409,7 +1424,7 @@ function openNoteDetail(projectId) {
     // Carousel dots (only if multiple images)
     if (imgUrls.length > 1) {
       html += `<div class="nd-dots" id="ndDots">
-        ${imgUrls.map((_, i) => `<div class="nd-dot${i === 0 ? ' active' : ''}"></div>`).join('')}
+        ${imgUrls.map((_, i) => `<div class="nd-dot${i === 0 ? ' active' : ''}" onclick="showImage(${i})"></div>`).join('')}
       </div>`;
     }
 
@@ -1457,6 +1472,9 @@ function showImage(index) {
 
   const total = note.imageUrls.length;
   const newIndex = ((index % total) + total) % total;
+
+  // Skip if already showing this index
+  if (newIndex === currentImageIndex) return;
   currentImageIndex = newIndex;
 
   // Show correct card
@@ -1468,6 +1486,13 @@ function showImage(index) {
   document.querySelectorAll('.nd-dot').forEach((dot, i) => {
     dot.classList.toggle('active', i === newIndex);
   });
+}
+
+function clickImage(event, idx) {
+  const rect = event.currentTarget.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  if (x < rect.width / 2) showImage(idx - 1);
+  else showImage(idx + 1);
 }
 
 let addTagTargetIndex = -1;
