@@ -567,9 +567,21 @@
     color: var(--text-tertiary); font-size: 13px; cursor: pointer; overflow: hidden;
     transition: background 0.2s;
   }
+  .note-img-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
   .note-img-thumb:hover { background: #E8E8EA; }
   .note-img-thumb .e { color: var(--text-tertiary); }
   .note-img-thumb .e svg { width: 36px; height: 36px; }
+
+  .note-image-grid {
+    display: flex; gap: 10px; overflow-x: auto; padding: 8px 0 16px;
+    scrollbar-width: none; flex-shrink: 0;
+  }
+  .note-image-grid::-webkit-scrollbar { display: none; }
+  .note-image-grid .nig-item {
+    width: 100px; height: 130px; border-radius: 10px; overflow: hidden;
+    flex-shrink: 0; border: 1.5px solid var(--border); background: #F4F4F5;
+  }
+  .note-image-grid .nig-item img { width:100%; height:100%; object-fit:cover; display:block; }
 
   .note-tags-section { margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--border); }
   .note-tags-label { font-size: 11px; font-weight: 600; color: var(--text-tertiary); letter-spacing: 2px; text-transform: uppercase; cursor: pointer; margin-bottom: 10px; user-select: none; }
@@ -717,7 +729,7 @@
     <div class="overlay-topbar">
       <button class="back" onclick="closeOverlay('overlay-note')"><span data-icon="arrowLeft" style="margin-right:4px"></span>返回</button>
       <span class="o-title">笔记</span>
-      <button class="o-action" onclick="saveNoteAction()">保存</button>
+      <button class="o-action" onclick="generateSummary()">生成项目总结</button>
     </div>
     <div class="overlay-scroll">
       <div class="note-content" id="noteEditor"></div>
@@ -1008,7 +1020,12 @@ function openProject(id) {
 
 function closeOverlay(id) {
   document.getElementById(id).classList.remove('open');
-  // Refresh notes on return
+  if (id === 'overlay-note') {
+    const btn = document.querySelector('#overlay-note .o-action');
+    btn.textContent = '生成项目总结';
+    btn.disabled = false;
+    btn.style.opacity = '1';
+  }
   renderNotes();
   updateNoteCount();
 }
@@ -1249,6 +1266,14 @@ function openNoteDetail(projectId) {
     try { tagList = JSON.parse(note.tags); } catch(e) {}
     const lines = note.content.split('\n').filter(l => l.trim());
     let html = '';
+
+    // Image preview strip
+    const imgUrls = note.imageUrls || [];
+    if (imgUrls.length > 0) {
+      html += `<div class="note-image-grid">${imgUrls.map(url => `<div class="nig-item"><img src="${url}" /></div>`).join('')}</div>`;
+    }
+
+    // Editable text content
     lines.forEach(line => {
       const t = line.trim();
       if (t.startsWith('# ')) html += `<div class="note-title-edit" contenteditable="true">${t.replace(/^# /,'')}</div>`;
@@ -1275,7 +1300,7 @@ function openNoteDetail(projectId) {
   document.getElementById('overlay-note').classList.add('open');
 }
 
-function saveNoteAction() {
+function generateSummary() {
   const tagsInput = document.getElementById('noteTagsInput');
   if (tagsInput) {
     const tagList = tagsInput.value.split(/[,，]/).map(t => t.trim()).filter(Boolean);
@@ -1284,12 +1309,11 @@ function saveNoteAction() {
       note.tags = JSON.stringify(tagList);
       renderNotes();
     }
-    const row = document.querySelector('.note-tags-row');
-    if (row) row.innerHTML = tagList.map(t => `<span class="tag">${t}</span>`).join('');
   }
   const btn = document.querySelector('#overlay-note .o-action');
-  btn.textContent = '已保存 ✓';
-  setTimeout(() => { btn.textContent = '保存'; }, 1500);
+  btn.textContent = '已生成 ✓';
+  btn.disabled = true;
+  btn.style.opacity = '0.5';
 }
 
 function toggleNoteTags(el) {
