@@ -212,16 +212,20 @@
   .carousel-3d-track {
     position: relative; width: 279.941px; height: 235.74px;
     transform-style: preserve-3d;
+    will-change: transform;
   }
   .carousel-3d-track .c3d-item {
     position: absolute; width: 279.941px; height: 235.74px;
     left: 0; top: 0;
     transform-style: preserve-3d;
-    backface-visibility: hidden;
+    transform: translateZ(0);
+    will-change: transform;
   }
   .carousel-3d-track .c3d-card {
     width: 100%; height: 100%; border-radius: 8.84025px; overflow: hidden;
     box-shadow: none;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
   }
   .carousel-3d-track .c3d-card img {
     width: 100%; height: 100%; object-fit: cover; display: block;
