@@ -1413,15 +1413,6 @@ function openNoteDetail(projectId) {
       </div>`;
     }
 
-    // Overall notes section
-    html += `<div class="note-overall-notes">
-      <div class="nd-card">
-        <div class="nd-body">
-          <div class="nd-text" contenteditable="true" data-placeholder="整体笔记内容...">${note.notesText || ''}</div>
-        </div>
-      </div>
-    </div>`;
-
     editor.innerHTML = html;
 
     // Auto-show carousel if multiple images
