@@ -1010,16 +1010,11 @@ function createProject() {
 }
 
 function handleImportClick() {
-  if (projects.length === 0) {
-    const project = { id: Date.now(), title: '新项目', createdAt: new Date().toISOString() };
-    projects.push(project);
-    projectImages[project.id] = [];
-    renderProjects();
-    currentProjectId = project.id;
-  } else {
-    currentProjectId = projects[0].id;
-    if (!projectImages[currentProjectId]) projectImages[currentProjectId] = [];
-  }
+  const project = { id: Date.now(), title: '新项目', createdAt: new Date().toISOString() };
+  projects.push(project);
+  projectImages[project.id] = [];
+  currentProjectId = project.id;
+  renderProjects();
   triggerFilePicker();
 }
 
@@ -1132,6 +1127,7 @@ function handleFilePick(event) {
   const images = projectImages[currentProjectId];
   let processed = 0;
   const total = files.length;
+  const newImages = [];
 
   Array.from(files).forEach((file, i) => {
     const reader = new FileReader();
@@ -1147,6 +1143,7 @@ function handleFilePick(event) {
         tags: JSON.stringify(['截图']),
       };
       images.push(imgEntry);
+      newImages.push(imgEntry);
       processed++;
 
       if (processed === total) {
@@ -1156,9 +1153,9 @@ function handleFilePick(event) {
           projectTitle: projects.find(p => p.id === currentProjectId)?.title || '新项目',
           content: '',
           tags: JSON.stringify(['截图']),
-          imageCount: images.length,
-          imageUrls: images.map(img => img.fileDataUrl || img.imgSrc || '').filter(Boolean),
-          imageNotes: images.map(() => ''),
+          imageCount: newImages.length,
+          imageUrls: newImages.map(img => img.fileDataUrl || img.imgSrc || '').filter(Boolean),
+          imageNotes: newImages.map(() => ''),
           notesText: '',
           updatedAt: new Date().toISOString(),
         };
