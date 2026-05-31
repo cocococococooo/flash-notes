@@ -410,8 +410,8 @@
   .note-card .nmeta .ndot { color: var(--text-quaternary); }
   .note-card .ntr { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 2px; }
   .note-card .ntr .ntag {
-    background: #F4F4F5; padding: 3px 9px; border-radius: 100px;
-    font-size: 11px; color: var(--text-primary); font-weight: 500;
+    padding: 3px 9px; border-radius: 100px;
+    font-size: 11px; font-weight: 500;
   }
   .note-card .ntr .nmore { font-size: 11px; color: var(--text-tertiary); font-weight: 500; align-self: center; }
 
@@ -1084,7 +1084,27 @@ function editTags(el, id) {
   };
 }
 
-// ===================== NOTES LIST =====================
+// ===================== TAG COLOR UTILITY =====================
+const TAG_PALETTE = [
+  { bg: '#FEE2E2', text: '#991B1B' },
+  { bg: '#E0E7FF', text: '#3730A3' },
+  { bg: '#D1FAE5', text: '#065F46' },
+  { bg: '#FEF3C7', text: '#92400E' },
+  { bg: '#E0F2FE', text: '#075985' },
+  { bg: '#F3E8FF', text: '#6B21A8' },
+  { bg: '#FCE7F3', text: '#9D174D' },
+  { bg: '#ECFDF5', text: '#065F46' },
+  { bg: '#FFF7ED', text: '#9A3412' },
+  { bg: '#F5F5F4', text: '#44403C' },
+];
+
+function tagColor(tag) {
+  let hash = 0;
+  for (let i = 0; i < tag.length; i++) {
+    hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return TAG_PALETTE[Math.abs(hash) % TAG_PALETTE.length];
+}
 function renderNotes() {
   const list = document.getElementById('notesList');
   if (allNotes.length === 0) {
@@ -1120,7 +1140,7 @@ function renderNotes() {
           <span class="ndot">·</span>
           <span>${new Date(n.updatedAt).toLocaleDateString('zh-CN')}</span>
         </div>
-        ${displayTags.length > 0 ? `<div class="ntr">${displayTags.map(t => `<span class="ntag">${t}</span>`).join('')}${moreCount > 0 ? `<span class="nmore">+${moreCount}</span>` : ''}</div>` : ''}
+        ${displayTags.length > 0 ? `<div class="ntr">${displayTags.map(t => { const c = tagColor(t); return `<span class="ntag" style="background:${c.bg};color:${c.text}">${t}</span>`; }).join('')}${moreCount > 0 ? `<span class="nmore">+${moreCount}</span>` : ''}</div>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -1157,7 +1177,7 @@ function openNoteDetail(projectId) {
       <div class="note-tags-label" onclick="toggleNoteTags(this)">标签 &#9660;</div>
       <div class="note-tags-edit">
         <input type="text" id="noteTagsInput" value="${tagList.join(', ')}" placeholder="输入标签，用逗号分隔" />
-        <div class="note-tags-row">${tagList.map(t => `<span class="tag">${t}</span>`).join('')}</div>
+        <div class="note-tags-row">${tagList.map(t => { const c = tagColor(t); return `<span class="tag" style="background:${c.bg};color:${c.text}">${t}</span>`; }).join('')}</div>
       </div>
     </div>`;
     editor.innerHTML = html;
