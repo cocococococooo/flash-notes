@@ -984,11 +984,16 @@ function createProject() {
 
 function handleImportClick() {
   if (projects.length === 0) {
-    alert('请先创建一个项目');
-    return;
+    const project = { id: Date.now(), title: '新项目', createdAt: new Date().toISOString() };
+    projects.push(project);
+    projectImages[project.id] = [];
+    renderProjects();
+    currentProjectId = project.id;
+  } else {
+    currentProjectId = projects[0].id;
+    if (!projectImages[currentProjectId]) projectImages[currentProjectId] = [];
   }
-  openProject(projects[0].id);
-  setTimeout(triggerFilePicker, 300);
+  triggerFilePicker();
 }
 
 // ===================== PROJECT DETAIL =====================
@@ -1090,32 +1095,54 @@ function triggerFilePicker() {
 function handleFilePick(event) {
   const files = event.target.files;
   if (!files || files.length === 0) return;
+  if (!projectImages[currentProjectId]) projectImages[currentProjectId] = [];
+
   const images = projectImages[currentProjectId];
-  if (!images) return;
+  let processed = 0;
+  const total = files.length;
 
   Array.from(files).forEach((file, i) => {
     const reader = new FileReader();
     reader.onload = function(e) {
-      images.push({
+      const imgEntry = {
         id: imageIdCounter++,
-        status: 'processing',
+        status: 'done',
         icon: 'notes',
         fileDataUrl: e.target.result,
+        imgSrc: PLACEHOLDER_IMAGES[i % PLACEHOLDER_IMAGES.length],
         ocr: '',
-        summary: '',
-        tags: '[]',
-      });
-      renderProjectImages();
+        summary: '已导入截图',
+        tags: JSON.stringify(['截图']),
+      };
+      images.push(imgEntry);
+      processed++;
 
-      setTimeout(() => {
-        const img = images.find(img => img.fileDataUrl === e.target.result);
-        if (img) {
-          img.status = 'done';
-          img.summary = '已导入截图，AI 分析待实现';
-          img.tags = JSON.stringify(['截图']);
-          renderProjectImages();
+      if (processed === total) {
+        // Create a note from imported images
+        const tagSet = new Set();
+        images.forEach(img => {
+          try { JSON.parse(img.tags).forEach(t => tagSet.add(t)); } catch(e) {}
+        });
+        const note = {
+          id: allNotes.length + 1,
+          projectId: currentProjectId,
+          projectTitle: '新项目',
+          content: `# 笔记\n\n## 一、核心要点\n\n${images.map((img, j) => `${img.summary} [图${j+1}]`).join('\n\n')}`,
+          tags: JSON.stringify(Array.from(tagSet)),
+          imageCount: images.length,
+          imageUrls: images.map(img => img.fileDataUrl || img.imgSrc || '').filter(Boolean),
+          updatedAt: new Date().toISOString(),
+        };
+        const existingIdx = allNotes.findIndex(n => n.projectId === currentProjectId);
+        if (existingIdx >= 0) {
+          allNotes[existingIdx] = note;
+        } else {
+          allNotes.push(note);
         }
-      }, 1500 + i * 300);
+        renderNotes();
+        updateNoteCount();
+        openNoteDetail(currentProjectId);
+      }
     };
     reader.readAsDataURL(file);
   });
