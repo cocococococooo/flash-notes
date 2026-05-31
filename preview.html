@@ -702,6 +702,48 @@
   }
   .nd-dots.hidden { display: none; }
 
+  /* AI Generated note */
+  .ai-note {
+    padding: 20px; animation: fadeUp 0.4s ease;
+  }
+  .ai-note-date {
+    font-size: 11px; color: var(--text-tertiary);
+    letter-spacing: 2px; text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .ai-note-title {
+    font-family: "Noto Serif SC", "Songti SC", Georgia, serif;
+    font-size: 24px; font-weight: 700; color: var(--text-primary);
+    line-height: 1.35; margin-bottom: 20px;
+  }
+  .ai-note-section { margin-bottom: 20px; }
+  .ai-note-section-title {
+    font-size: 16px; font-weight: 600; color: var(--text-primary);
+    margin-bottom: 8px; line-height: 1.4;
+  }
+  .ai-note-text {
+    font-size: 14px; color: var(--text-secondary); line-height: 1.7;
+    white-space: pre-wrap;
+  }
+  .ai-note-image-block {
+    margin-bottom: 16px; border-radius: var(--radius-sm);
+    overflow: hidden; border: 1px solid var(--border);
+  }
+  .ai-note-image-block img {
+    width: 100%; display: block;
+  }
+  .ai-note-caption {
+    padding: 10px 14px; font-size: 13px; color: var(--text-secondary);
+    background: var(--bg); line-height: 1.5;
+  }
+  .ai-note-tags {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-top: 16px;
+  }
+  .ai-note-tag {
+    padding: 5px 14px; border-radius: 100px;
+    font-size: 12px; font-weight: 500;
+  }
+
   .note-tags-section { margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--border); }
   .note-tags-label { font-size: 11px; font-weight: 600; color: var(--text-tertiary); letter-spacing: 2px; text-transform: uppercase; cursor: pointer; margin-bottom: 10px; user-select: none; }
   .note-tags-label:hover { opacity: 0.6; }
@@ -1552,14 +1594,7 @@ function generateSummary() {
   const note = allNotes.find(n => n.projectId === currentProjectId);
   if (!note) return;
 
-  // Save tags
-  const tagsInput = document.getElementById('noteTagsInput');
-  if (tagsInput) {
-    const tagList = tagsInput.value.split(/[,，]/).map(t => t.trim()).filter(Boolean);
-    note.tags = JSON.stringify(tagList);
-  }
-
-  // Save image captions from nd-text
+  // Save tags and notes first
   const cards = document.querySelectorAll('.nd-card[data-index]');
   cards.forEach(card => {
     const idx = parseInt(card.dataset.index);
@@ -1569,15 +1604,61 @@ function generateSummary() {
     }
   });
 
-  // Save overall notes
-  const overallTexts = document.querySelectorAll('.note-overall-notes .nd-text');
-  note.notesText = Array.from(overallTexts).map(el => el.textContent.trim()).join('\n');
-
-  renderNotes();
   const btn = document.querySelector('#overlay-note .o-action');
-  btn.textContent = '已生成 ✓';
+  btn.textContent = 'AI 生成中...';
   btn.disabled = true;
   btn.style.opacity = '0.5';
+
+  setTimeout(() => {
+    const editor = document.getElementById('noteEditor');
+    const tagList = (() => { try { return JSON.parse(note.tags); } catch { return []; } })();
+    const project = projects.find(p => p.id === currentProjectId);
+    const imgUrls = note.imageUrls || [];
+    const imageNotes = note.imageNotes || [];
+
+    // Generate AI-style content
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('zh-CN');
+    const title = `${project ? project.title : '笔记'} · AI 总结`;
+
+    // Generate summary text based on image notes
+    const summaryLines = imageNotes.filter(t => t).map(t => `- ${t}`);
+    const summaryText = summaryLines.length > 0
+      ? summaryLines.join('\n')
+      : '本次笔记涵盖了导入截图中的关键知识点，以下是整理后的完整内容。';
+
+    const formattedContent = `
+<div class="ai-note">
+  <div class="ai-note-date">${dateStr}</div>
+  <div class="ai-note-title">${title}</div>
+
+  <div class="ai-note-section">
+    <div class="ai-note-section-title">一、概览</div>
+    <div class="ai-note-text">本次共处理 ${imgUrls.length} 张截图，整理核心要点如下。</div>
+  </div>
+
+  ${imgUrls.map((url, i) => `
+  <div class="ai-note-image-block">
+    <img src="${url}" />
+    ${imageNotes[i] ? `<div class="ai-note-caption">${imageNotes[i]}</div>` : ''}
+  </div>
+  `).join('')}
+
+  <div class="ai-note-section">
+    <div class="ai-note-section-title">二、要点总结</div>
+    <div class="ai-note-text">${summaryText}</div>
+  </div>
+
+  ${tagList.length > 0 ? `
+  <div class="ai-note-tags">
+    ${tagList.map(t => { const c = tagColor(t); return `<span class="ai-note-tag" style="background:${c.bg};color:${c.text}">${t}</span>`; }).join('')}
+  </div>` : ''}
+</div>`;
+
+    editor.innerHTML = formattedContent;
+    btn.textContent = '已生成 ✓';
+    btn.style.opacity = '0.5';
+  }, 1200);
 }
 
 function toggleNoteTags(el) {
