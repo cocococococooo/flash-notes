@@ -201,10 +201,31 @@
   }
   .hero p { font-size: 14px; color: var(--text-tertiary); margin-top: 8px; line-height: 1.6; }
 
-  /* 3D Auto Carousel */
-  .carousel-section { padding: 0 0 20px; }
-  .carousel-3d {
-    position: relative; width: 100%; height: 260px;
+  /* 3D Carousel — CSS 3D Transform */
+  .carousel-section { padding: 0 0 24px; }
+  .carousel-3d-wrap {
+    width: 100%; height: 240px;
+    display: flex; align-items: center; justify-content: center;
+    perspective: 800px; overflow: hidden; cursor: default;
+    user-select: none;
+  }
+  .carousel-3d-track {
+    position: relative; width: 220px; height: 185px;
+    transform-style: preserve-3d;
+    transition: transform 0.1s linear;
+  }
+  .carousel-3d-track .c3d-item {
+    position: absolute; width: 220px; height: 185px;
+    left: 0; top: 0;
+    transform-style: preserve-3d;
+    backface-visibility: hidden;
+  }
+  .carousel-3d-track .c3d-card {
+    width: 100%; height: 100%; border-radius: 12px; overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  }
+  .carousel-3d-track .c3d-card img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
   }
   .carousel-3d .c3d-item {
     position: absolute; top: 50%; left: 50%;
@@ -649,9 +670,11 @@
           <p class="fade-in" style="animation-delay:0.15s">导入截图，AI 自动生成结构化笔记</p>
         </div>
 
-        <!-- 3D Auto Carousel -->
+        <!-- 3D Carousel -->
         <div class="carousel-section">
-          <div class="carousel-3d" id="carousel3d"></div>
+          <div class="carousel-3d-wrap">
+            <div class="carousel-3d-track" id="carouselTrack"></div>
+          </div>
           <div class="carousel-counter" id="carouselCounter">1 / 5</div>
         </div>
 
@@ -769,7 +792,7 @@ function initIcons() {
   });
 }
 
-// ===================== 3D AUTO CAROUSEL =====================
+// ===================== 3D CSS TRANSFORM CAROUSEL =====================
 const carouselItems = [
   { src: 'pic/0444fef320f4e1569a1c5026d74093ac.jpg' },
   { src: 'pic/0f263c438ec4c0ee88934537c7188826.jpg' },
@@ -777,48 +800,45 @@ const carouselItems = [
   { src: 'pic/c5fcfe8eed43182cb9112022457cbd2f.jpg' },
   { src: 'pic/e1b59ad3b2b1815b4ea7bc1f55a228cd.jpg' },
 ];
-let carouselIdx = 0;
 
-const c3dPositions = [
-  { x: -4, y: -18, s: 0.90, z: 100 },
-  { x: 64, y: -8, s: 0.80, z: 79 },
-  { x: 76, y: 8, s: 0.65, z: 29 },
-  { x: 4, y: 16, s: 0.50, z: 0 },
-  { x: -76, y: 8, s: 0.65, z: 21 },
-  { x: -64, y: -8, s: 0.80, z: 71 },
-];
+let carouselAngle = 0;
+let lastTime = 0;
+const RADIUS = 380;
+const SPEED = 0.04; // radians per second
 
-function renderCarousel3d() {
-  const container = document.getElementById('carousel3d');
-  const total = carouselItems.length;
-  const items = container.children;
-  for (let i = 0; i < total; i++) {
-    const pos = (i - carouselIdx + total) % total;
-    const p = c3dPositions[pos];
-    const el = items[i] || container.children[0];
-    el.style.transform = `translate(-50%,-50%) translateX(${p.x}px) translateY(${p.y}px) scale(${p.s})`;
-    el.style.zIndex = p.z;
-    el.style.opacity = pos === 0 ? 1 : pos <= 2 ? 0.85 : 0.55;
+function buildCarousel() {
+  const track = document.getElementById('carouselTrack');
+  const n = carouselItems.length;
+  let html = '';
+  for (let i = 0; i < n; i++) {
+    const angle = (i / n) * 360;
+    html += `<div class="c3d-item" style="transform:rotateY(${angle}deg) translateZ(-${RADIUS}px);">
+      <div class="c3d-card"><img src="${carouselItems[i].src}" alt="" /></div>
+    </div>`;
   }
-  document.getElementById('carouselCounter').textContent = `${carouselIdx + 1} / ${total}`;
+  track.innerHTML = html;
 }
 
-function carouselAutoPlay() {
-  carouselIdx = (carouselIdx + 1) % carouselItems.length;
-  renderCarousel3d();
+function animateCarousel(time) {
+  if (!lastTime) lastTime = time;
+  const dt = (time - lastTime) / 1000;
+  lastTime = time;
+
+  carouselAngle += SPEED * dt * (180 / Math.PI); // convert rad/s to deg/s
+  const track = document.getElementById('carouselTrack');
+  if (track) track.style.transform = `rotateY(${carouselAngle}deg)`;
+
+  // Update counter
+  const n = carouselItems.length;
+  const idx = Math.round(((carouselAngle % 360) + 360) % 360 / (360 / n)) % n;
+  document.getElementById('carouselCounter').textContent = `${idx + 1} / ${n}`;
+
+  requestAnimationFrame(animateCarousel);
 }
 
 function startCarousel() {
-  const container = document.getElementById('carousel3d');
-  let html = '';
-  for (let i = 0; i < carouselItems.length; i++) {
-    html += `<div class="c3d-item" style="opacity:0;">
-      <img class="c3d-card" src="${carouselItems[i].src}" alt="" />
-    </div>`;
-  }
-  container.innerHTML = html;
-  renderCarousel3d();
-  setInterval(carouselAutoPlay, 3000);
+  buildCarousel();
+  requestAnimationFrame(animateCarousel);
 }
 
 // ===================== INIT =====================
