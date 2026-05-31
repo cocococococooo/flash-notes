@@ -779,30 +779,27 @@ const carouselItems = [
 ];
 let carouselIdx = 0;
 
-// 6-position arc layout (scaled for 375px phone; based on Framer reference)
 const c3dPositions = [
-  { x: -10, y: -18, s: 0.85, z: 100 },     // center (top)
-  { x: 88, y: -12, s: 0.73, z: 79 },       // right
-  { x: 98, y: 8, s: 0.54, z: 29 },         // far right (bottom)
-  { x: 10, y: 18, s: 0.35, z: 0 },         // bottom
-  { x: -98, y: 8, s: 0.54, z: 21 },        // far left (bottom)
-  { x: -88, y: -12, s: 0.73, z: 71 },      // left
+  { x: -10, y: -18, s: 0.85, z: 100 },
+  { x: 88, y: -12, s: 0.73, z: 79 },
+  { x: 98, y: 8, s: 0.54, z: 29 },
+  { x: 10, y: 18, s: 0.35, z: 0 },
+  { x: -98, y: 8, s: 0.54, z: 21 },
+  { x: -88, y: -12, s: 0.73, z: 71 },
 ];
 
 function renderCarousel3d() {
   const container = document.getElementById('carousel3d');
   const total = carouselItems.length;
-  let html = '';
+  const items = container.children;
   for (let i = 0; i < total; i++) {
     const pos = (i - carouselIdx + total) % total;
     const p = c3dPositions[pos];
-    const item = carouselItems[i];
-    const opacity = pos === 0 ? 1 : pos <= 2 ? 0.85 : 0.55;
-    html += `<div class="c3d-item" style="transform:translate(-50%,-50%) translateX(${p.x}px) translateY(${p.y}px) scale(${p.s}); z-index:${p.z}; opacity:${opacity};">
-      <img class="c3d-card" src="${item.src}" alt="" />
-    </div>`;
+    const el = items[i] || container.children[0];
+    el.style.transform = `translate(-50%,-50%) translateX(${p.x}px) translateY(${p.y}px) scale(${p.s})`;
+    el.style.zIndex = p.z;
+    el.style.opacity = pos === 0 ? 1 : pos <= 2 ? 0.85 : 0.55;
   }
-  container.innerHTML = html;
   document.getElementById('carouselCounter').textContent = `${carouselIdx + 1} / ${total}`;
 }
 
@@ -812,6 +809,14 @@ function carouselAutoPlay() {
 }
 
 function startCarousel() {
+  const container = document.getElementById('carousel3d');
+  let html = '';
+  for (let i = 0; i < carouselItems.length; i++) {
+    html += `<div class="c3d-item" style="opacity:0;">
+      <img class="c3d-card" src="${carouselItems[i].src}" alt="" />
+    </div>`;
+  }
+  container.innerHTML = html;
   renderCarousel3d();
   setInterval(carouselAutoPlay, 3000);
 }
