@@ -213,13 +213,6 @@
     display: flex; align-items: center; justify-content: center;
     transition: transform 0.7s cubic-bezier(0.4, 2, 0.3, 1), opacity 0.5s;
   }
-  .carousel-3d .c3d-card-inner {
-    width: 140px; height: 180px; border-radius: 18px;
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 6px 24px rgba(0,0,0,0.15);
-    color: #FFF; font-size: 13px; font-weight: 600; letter-spacing: 1px;
-    text-shadow: 0 1px 4px rgba(0,0,0,0.2);
-  }
   .carousel-counter {
     text-align: center; font-size: 12px; color: var(--text-tertiary);
     font-family: "Inter", sans-serif; margin-top: 12px;
@@ -828,21 +821,20 @@ function initIcons() {
 
 // ===================== 3D AUTO CAROUSEL =====================
 const carouselItems = [
-  { bg: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', label: '笔记预览' },
-  { bg: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', label: '知识整理' },
-  { bg: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', label: 'AI 总结' },
-  { bg: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', label: '标签分类' },
-  { bg: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', label: '快速检索' },
+  { src: 'pic/0444fef320f4e1569a1c5026d74093ac.jpg' },
+  { src: 'pic/0f263c438ec4c0ee88934537c7188826.jpg' },
+  { src: 'pic/b40e7364bff07dff7d5999c19ce48ee3.jpg' },
+  { src: 'pic/c5fcfe8eed43182cb9112022457cbd2f.jpg' },
+  { src: 'pic/e1b59ad3b2b1815b4ea7bc1f55a228cd.jpg' },
 ];
 let carouselIdx = 0;
 
-// 3D layout: 5 positions (center, right, far-right, far-left, left)
 const c3dLayout = [
-  { tx: 0, ty: -8, s: 1.0, z: 100, o: 1 },      // center (top)
-  { tx: 105, ty: 10, s: 0.7, z: 74, o: 0.8 },    // right
-  { tx: 80, ty: 28, s: 0.45, z: 24, o: 0.5 },    // far-right (bottom)
-  { tx: -80, ty: 28, s: 0.45, z: 26, o: 0.5 },   // far-left (bottom)
-  { tx: -105, ty: 10, s: 0.7, z: 76, o: 0.8 },   // left
+  { tx: 0, ty: -8, s: 1.0, z: 100, o: 1 },
+  { tx: 105, ty: 10, s: 0.7, z: 74, o: 0.8 },
+  { tx: 80, ty: 28, s: 0.45, z: 24, o: 0.5 },
+  { tx: -80, ty: 28, s: 0.45, z: 26, o: 0.5 },
+  { tx: -105, ty: 10, s: 0.7, z: 76, o: 0.8 },
 ];
 
 function renderCarousel3d() {
@@ -854,7 +846,7 @@ function renderCarousel3d() {
     const layout = c3dLayout[pos];
     const item = carouselItems[i];
     html += `<div class="c3d-item" style="transform:translate(${layout.tx}px,${layout.ty}px) scale(${layout.s}); z-index:${layout.z}; opacity:${layout.o};">
-      <div class="c3d-card-inner" style="background:${item.bg};">${item.label}</div>
+      <img class="c3d-card-inner" src="${item.src}" style="width:140px;height:180px;border-radius:18px;object-fit:cover;display:block;box-shadow:0 6px 24px rgba(0,0,0,0.15);pointer-events:none;" />
     </div>`;
   }
   container.innerHTML = html;
