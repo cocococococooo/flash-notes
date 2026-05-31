@@ -27,96 +27,20 @@
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
+  html,body{height:100%}
+
   body {
-    background: #EAE9E6;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
+    background: var(--bg);
     font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    padding: 20px;
   }
 
-  /* ===== PHONE FRAME ===== */
+  /* Screens fill parent — design baseline iPhone 14 (390×844) */
   .phone {
-    width: 375px;
-    height: 812px;
+    width: 100%;
+    height: 100%;
     background: var(--bg);
-    border-radius: 44px;
-    box-shadow: 0 0 0 8px #1a1a1a, 0 0 0 10px #444, 0 25px 80px rgba(0,0,0,0.35);
-    overflow: hidden;
-    position: relative;
     display: flex;
     flex-direction: column;
-  }
-
-  /* ===== NOISE TEXTURE ===== */
-  .phone::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: 9999;
-    pointer-events: none;
-    opacity: 0.015;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-    background-repeat: repeat;
-    background-size: 256px 256px;
-    border-radius: 44px;
-  }
-
-  /* ===== STATUS BAR ===== */
-  .status-bar-wrap {
-    position: relative;
-    height: 54px;
-    background: var(--bg);
-    flex-shrink: 0;
-    z-index: 99;
-  }
-  .sb-time {
-    position: absolute;
-    left: 28px;
-    top: 14px;
-    font-size: 17px;
-    font-weight: 700;
-    font-family: -apple-system, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
-    letter-spacing: 0.3px;
-    color: #1a1a1a;
-    z-index: 102;
-  }
-  .sb-icons {
-    position: absolute;
-    right: 22px;
-    top: 16px;
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    z-index: 102;
-  }
-  .sb-signal { display: flex; align-items: flex-end; gap: 1.5px; height: 12px; }
-  .sb-signal div { width: 3px; background: #1a1a1a; border-radius: 1px; }
-  .sb-signal .s1 { height: 3px; }
-  .sb-signal .s2 { height: 5px; }
-  .sb-signal .s3 { height: 8px; }
-  .sb-signal .s4 { height: 11px; }
-  .sb-wifi { width: 16px; height: 12px; }
-  .sb-wifi svg { display: block; }
-  .sb-battery { display: flex; align-items: center; }
-  .sb-battery .battery-body { width: 25px; height: 12px; border: 1.5px solid #1a1a1a; border-radius: 3px; position: relative; display: flex; align-items: center; padding: 1.5px; }
-  .sb-battery .battery-head { width: 2px; height: 5px; background: #1a1a1a; border-radius: 0 1px 1px 0; margin-left: 1px; }
-  .sb-battery .battery-fill { height: 7px; background: #1a1a1a; border-radius: 1.5px; }
-  .sb-battery .battery-pct { font-size: 12px; font-weight: 600; color: #1a1a1a; margin-left: 3px; }
-  .notch {
-    position: absolute;
-    top: 0; left: 50%; transform: translateX(-50%);
-    width: 160px; height: 34px;
-    background: #1a1a1a;
-    border-radius: 0 0 20px 20px;
-    z-index: 101;
-  }
-  .notch::after {
-    content: '';
-    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-    width: 10px; height: 10px; background: #2a2a2a; border-radius: 50%; border: 1px solid #333;
   }
 
   /* ===== SCREEN CONTENT ===== */
@@ -794,28 +718,6 @@
 <body>
 
 <div class="phone" id="phone">
-  <!-- Status Bar -->
-  <div class="status-bar-wrap">
-    <div class="sb-time">9:41</div>
-    <div class="sb-icons">
-      <div class="sb-signal">
-        <div class="s1"></div><div class="s2"></div><div class="s3"></div><div class="s4"></div>
-      </div>
-      <div class="sb-wifi">
-        <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
-          <path d="M8 11.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2zM5.5 8.5a3.5 3.5 0 0 1 5 0l-.7.7a2.5 2.5 0 0 0-3.6 0l-.7-.7zM3 6a6 6 0 0 1 10 0l-.7.7a5 5 0 0 0-8.6 0L3 6zM.5 3.5a8.5 8.5 0 0 1 15 0l-.7.7a7.5 7.5 0 0 0-13.6 0L.5 3.5z" fill="#1a1a1a"/>
-        </svg>
-      </div>
-      <div class="sb-battery">
-        <div class="battery-body"><div class="battery-fill" style="width:78%"></div></div>
-        <div class="battery-head"></div>
-        <span class="battery-pct">86%</span>
-      </div>
-    </div>
-    <div class="notch"></div>
-  </div>
-
-  <!-- Screen Content -->
   <div class="screen" id="screen">
 
     <!-- ===== TAB 1: HOME ===== -->
@@ -1111,15 +1013,6 @@ function tagColor(tag) {
   updateNoteCount();
   document.getElementById('fileInput').addEventListener('change', handleFilePick);
 })();
-
-// ===================== CLOCK =====================
-function updateClock() {
-  const now = new Date();
-  document.querySelector('.sb-time').textContent =
-    `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-}
-updateClock();
-setInterval(updateClock, 30000);
 
 // ===================== TAB SWITCHING =====================
 function switchTab(index) {
