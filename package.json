@@ -1,0 +1,11 @@
+{
+  "name": "flash-notes-preview",
+  "version": "0.0.0",
+  "private": true,
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  },
+  "scripts": {
+    "preview": "live-server --watch=preview.html --open=preview.html --port=5500"
+  }
+}

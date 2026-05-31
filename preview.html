@@ -631,6 +631,49 @@
     border-color: var(--text-tertiary); color: var(--text-secondary);
   }
 
+  /* Tag input floating layer */
+  .tag-input-overlay {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.4); z-index: 400;
+    display: flex; align-items: center; justify-content: center;
+    animation: fadeIn 0.2s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .tag-input-modal {
+    background: var(--surface); border-radius: var(--radius-md);
+    padding: 20px; width: 80%; max-width: 280px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    animation: modalIn 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @keyframes modalIn { from { opacity:0; transform:scale(0.95) translateY(10px); } to { opacity:1; transform:scale(1) translateY(0); } }
+  .tag-input-header {
+    font-size: 15px; font-weight: 600; color: var(--text-primary);
+    margin-bottom: 14px;
+  }
+  .tag-input-modal input {
+    width: 100%; border: 1.5px solid var(--border); border-radius: 8px;
+    padding: 11px 12px; font-size: 14px; outline: none;
+    font-family: inherit; background: var(--bg);
+    transition: border-color 0.2s;
+  }
+  .tag-input-modal input:focus { border-color: var(--accent); }
+  .tag-input-actions {
+    display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;
+  }
+  .tag-input-cancel, .tag-input-confirm {
+    border: none; border-radius: 8px; padding: 8px 20px;
+    font-size: 13px; font-weight: 500; cursor: pointer;
+    font-family: inherit; transition: all 0.2s;
+  }
+  .tag-input-cancel {
+    background: var(--bg); color: var(--text-secondary);
+  }
+  .tag-input-cancel:hover { background: #E8E8EA; }
+  .tag-input-confirm {
+    background: var(--accent); color: #FFF;
+  }
+  .tag-input-confirm:hover { background: #333; }
+
   /* Carousel dots */
   .nd-dots {
     display: flex; justify-content: center; gap: 6px; padding: 12px 0;
@@ -804,6 +847,18 @@
   <div class="viewer-overlay" id="viewer">
     <button class="close-v" onclick="closeViewer()">关闭</button>
     <div class="v-content"><span data-icon="notes" style="margin-right:8px;opacity:0.6"></span> 图片预览 (模拟)</div>
+  </div>
+
+  <!-- Tag input floating layer -->
+  <div class="tag-input-overlay" id="tagInputOverlay" style="display:none">
+    <div class="tag-input-modal">
+      <div class="tag-input-header">添加标签</div>
+      <input type="text" id="tagInputField" placeholder="输入标签名称" />
+      <div class="tag-input-actions">
+        <button class="tag-input-cancel" onclick="cancelTagInput()">取消</button>
+        <button class="tag-input-confirm" onclick="confirmTagInput()">确定</button>
+      </div>
+    </div>
   </div>
 
   <input type="file" id="fileInput" accept="image/*" multiple style="display:none" />
@@ -1424,29 +1479,58 @@ function showImage(index) {
   });
 }
 
+let addTagTargetIndex = -1;
+
 function addImageTag(imgIndex) {
-  const tag = prompt('输入标签名称');
+  addTagTargetIndex = imgIndex;
+  const overlay = document.getElementById('tagInputOverlay');
+  const input = document.getElementById('tagInputField');
+  overlay.style.display = 'flex';
+  input.value = '';
+  setTimeout(() => input.focus(), 100);
+}
+
+function confirmTagInput() {
+  const input = document.getElementById('tagInputField');
+  const tag = input.value.trim();
   if (!tag) return;
 
   const note = allNotes.find(n => n.projectId === currentProjectId);
   if (!note) return;
   if (!note.imageTags) note.imageTags = [];
-  if (!note.imageTags[imgIndex]) note.imageTags[imgIndex] = [];
+  if (!note.imageTags[addTagTargetIndex]) note.imageTags[addTagTargetIndex] = [];
 
-  note.imageTags[imgIndex].push(tag.trim());
+  note.imageTags[addTagTargetIndex].push(tag);
 
   // Re-render that card's tags
-  const tagsContainer = document.querySelector(`.nd-tags[data-img="${imgIndex}"]`);
+  const tagsContainer = document.querySelector(`.nd-tags[data-img="${addTagTargetIndex}"]`);
   if (tagsContainer) {
-    const c = tagColor(tag.trim());
+    const c = tagColor(tag);
     const addBtn = tagsContainer.querySelector('.nd-add-tag');
     const span = document.createElement('span');
     span.className = 'nd-tag';
     span.style.cssText = `background:${c.bg};color:${c.text}`;
-    span.textContent = tag.trim();
+    span.textContent = tag;
     tagsContainer.insertBefore(span, addBtn);
   }
+
+  document.getElementById('tagInputOverlay').style.display = 'none';
 }
+
+function cancelTagInput() {
+  document.getElementById('tagInputOverlay').style.display = 'none';
+}
+
+// Close overlay when clicking background
+document.getElementById('tagInputOverlay').addEventListener('click', function(e) {
+  if (e.target === this) cancelTagInput();
+});
+
+// Close overlay on Enter key
+document.getElementById('tagInputField').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') confirmTagInput();
+  if (e.key === 'Escape') cancelTagInput();
+});
 
 function generateSummary() {
   const note = allNotes.find(n => n.projectId === currentProjectId);
