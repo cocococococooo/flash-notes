@@ -212,20 +212,15 @@
   .carousel-3d-track {
     position: relative; width: 279.941px; height: 235.74px;
     transform-style: preserve-3d;
-    will-change: transform;
   }
   .carousel-3d-track .c3d-item {
     position: absolute; width: 279.941px; height: 235.74px;
     left: 0; top: 0;
     transform-style: preserve-3d;
-    transform: translateZ(0);
-    will-change: transform;
   }
   .carousel-3d-track .c3d-card {
     width: 100%; height: 100%; border-radius: 8.84025px; overflow: hidden;
     box-shadow: none;
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
   }
   .carousel-3d-track .c3d-card img {
     width: 100%; height: 100%; object-fit: cover; display: block;
@@ -820,12 +815,24 @@ function animateCarousel(time) {
   const dt = (time - lastTime) / 1000;
   lastTime = time;
 
-  carouselAngle += SPEED * dt * (180 / Math.PI); // convert rad/s to deg/s
+  carouselAngle += SPEED * dt * (180 / Math.PI);
   const track = document.getElementById('carouselTrack');
-  if (track) track.style.transform = `rotateY(${carouselAngle}deg)`;
+  if (!track) { requestAnimationFrame(animateCarousel); return; }
+  track.style.transform = `rotateY(${carouselAngle}deg)`;
 
-  // Update counter
+  // Smooth opacity fade per item to avoid backface-visibility flicker
   const n = carouselItems.length;
+  const items = track.children;
+  for (let i = 0; i < n; i++) {
+    const itemAngle = (i / n) * 360;
+    const effective = ((carouselAngle + itemAngle) % 360 + 360) % 360;
+    const angleFromFront = Math.min(effective, 360 - effective); // 0→180
+    let opacity = 1;
+    if (angleFromFront > 100) opacity = 0;
+    else if (angleFromFront > 80) opacity = 1 - (angleFromFront - 80) / 20;
+    items[i].style.opacity = opacity;
+  }
+
   const idx = Math.round(((carouselAngle % 360) + 360) % 360 / (360 / n)) % n;
   document.getElementById('carouselCounter').textContent = `${idx + 1} / ${n}`;
 
