@@ -204,18 +204,17 @@
   /* 3D Carousel — CSS 3D Transform */
   .carousel-section { padding: 0 0 24px; }
   .carousel-3d-wrap {
-    width: 100%; height: 240px;
+    width: 100%; height: 200px;
     display: flex; align-items: center; justify-content: center;
-    perspective: 600px; overflow: hidden; cursor: default;
+    perspective: 400px; overflow: hidden; cursor: default;
     user-select: none;
   }
   .carousel-3d-track {
-    position: relative; width: 220px; height: 185px;
+    position: relative; width: 160px; height: 135px;
     transform-style: preserve-3d;
-    transition: transform 0.1s linear;
   }
   .carousel-3d-track .c3d-item {
-    position: absolute; width: 220px; height: 185px;
+    position: absolute; width: 160px; height: 135px;
     left: 0; top: 0;
     transform-style: preserve-3d;
     backface-visibility: hidden;
@@ -803,7 +802,7 @@ const carouselItems = [
 
 let carouselAngle = 0;
 let lastTime = 0;
-const RADIUS = 220;
+const RADIUS = 100;
 const SPEED = 0.04; // radians per second
 
 function buildCarousel() {
