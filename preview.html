@@ -204,42 +204,31 @@
   /* 3D Carousel — CSS 3D Transform */
   .carousel-section { padding: 0 0 24px; }
   .carousel-3d-wrap {
-    width: 100%; height: 200px;
+    width: 100%; height: 260px;
     display: flex; align-items: center; justify-content: center;
-    perspective: 400px; overflow: hidden; cursor: default;
+    perspective: 478.847px; overflow: hidden; cursor: default;
     user-select: none;
   }
   .carousel-3d-track {
-    position: relative; width: 160px; height: 135px;
+    position: relative; width: 279.941px; height: 235.74px;
     transform-style: preserve-3d;
   }
   .carousel-3d-track .c3d-item {
-    position: absolute; width: 160px; height: 135px;
+    position: absolute; width: 279.941px; height: 235.74px;
     left: 0; top: 0;
     transform-style: preserve-3d;
     backface-visibility: hidden;
   }
   .carousel-3d-track .c3d-card {
-    width: 100%; height: 100%; border-radius: 12px; overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    width: 100%; height: 100%; border-radius: 8.84025px; overflow: hidden;
+    box-shadow: none;
   }
   .carousel-3d-track .c3d-card img {
     width: 100%; height: 100%; object-fit: cover; display: block;
   }
-  .carousel-3d .c3d-item {
-    position: absolute; top: 50%; left: 50%;
-    display: flex; align-items: center; justify-content: center;
-    will-change: transform;
-    transition: transform 0.8s cubic-bezier(0.4, 2, 0.3, 1), opacity 0.6s;
-  }
-  .carousel-3d .c3d-card {
-    width: 160px; height: 160px; border-radius: 20px;
-    object-fit: cover; display: block; pointer-events: none;
-    box-shadow: 0 6px 24px rgba(0,0,0,0.15);
-  }
   .carousel-counter {
     text-align: center; font-size: 12px; color: var(--text-tertiary);
-    font-family: "Inter", sans-serif; margin-top: 12px;
+    font-family: "Inter", sans-serif; margin-top: 8px;
     font-weight: 500; letter-spacing: 1px;
   }
 
@@ -802,7 +791,6 @@ const carouselItems = [
 
 let carouselAngle = 0;
 let lastTime = 0;
-const RADIUS = 100;
 const SPEED = 0.04; // radians per second
 
 function buildCarousel() {
@@ -811,7 +799,7 @@ function buildCarousel() {
   let html = '';
   for (let i = 0; i < n; i++) {
     const angle = (i / n) * 360;
-    html += `<div class="c3d-item" style="transform:rotateY(${angle}deg) translateZ(-${RADIUS}px);">
+    html += `<div class="c3d-item" style="transform:rotateY(${angle}deg) translateZ(-456.746px);">
       <div class="c3d-card"><img src="${carouselItems[i].src}" alt="" /></div>
     </div>`;
   }
