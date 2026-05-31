@@ -704,7 +704,7 @@
     <div class="overlay-topbar">
       <button class="back" onclick="closeOverlay('overlay-project')"><span data-icon="arrowLeft" style="margin-right:4px"></span>返回</button>
       <span class="o-title" id="projectOverlayTitle">项目</span>
-      <button class="o-action" onclick="simulateImport()">从相册导入</button>
+      <button class="o-action" onclick="triggerFilePicker()">从相册导入</button>
     </div>
     <div class="overlay-scroll" id="projectImagesList"></div>
     <div class="bottom-gen">
@@ -729,6 +729,8 @@
     <button class="close-v" onclick="closeViewer()">关闭</button>
     <div class="v-content"><span data-icon="notes" style="margin-right:8px;opacity:0.6"></span> 图片预览 (模拟)</div>
   </div>
+
+  <input type="file" id="fileInput" accept="image/*" multiple style="display:none" />
 </div>
 
 <script>
@@ -909,6 +911,7 @@ function tagColor(tag) {
   startCarousel();
   renderNotes();
   updateNoteCount();
+  document.getElementById('fileInput').addEventListener('change', handleFilePick);
 })();
 
 // ===================== CLOCK =====================
@@ -971,6 +974,7 @@ function handleImportClick() {
     return;
   }
   openProject(projects[0].id);
+  setTimeout(triggerFilePicker, 300);
 }
 
 // ===================== PROJECT DETAIL =====================
@@ -1007,10 +1011,11 @@ function getImageCardHTML(img, index) {
   const isFailed = img.status === 'failed';
   const isDone = img.status === 'done';
 
+  const showImg = img.fileDataUrl;
   return `
     <div class="img-card fade-in" style="animation-delay:${index*0.08}s">
       <div class="img-placeholder">
-        <span class="icon-big">${icons[img.icon] || icons.notes}</span>
+        ${showImg ? `<img src="${img.fileDataUrl}" style="width:100%;height:100%;object-fit:cover;display:block" />` : `<span class="icon-big">${icons[img.icon] || icons.notes}</span>`}
         ${isProcessing ? '<div class="img-overlay"><div class="spinner"></div><span>分析中...</span></div>' : ''}
         ${isFailed ? '<div class="img-overlay failed"><span>分析失败</span><button class="retry" onclick="retryImg('+img.id+')">重试</button></div>' : ''}
       </div>
@@ -1057,11 +1062,50 @@ function simulateImport() {
   });
   renderProjectImages();
 
-  // Simulate processing → done
   const procImgs = images.filter(i => i.status === 'processing');
   procImgs.forEach((img, idx) => {
     setTimeout(() => { img.status = 'done'; renderProjectImages(); }, 2000 + idx * 500);
   });
+}
+
+function triggerFilePicker() {
+  document.getElementById('fileInput').click();
+}
+
+function handleFilePick(event) {
+  const files = event.target.files;
+  if (!files || files.length === 0) return;
+  const images = projectImages[currentProjectId];
+  if (!images) return;
+
+  Array.from(files).forEach((file, i) => {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      images.push({
+        id: imageIdCounter++,
+        status: 'processing',
+        icon: 'notes',
+        fileDataUrl: e.target.result,
+        ocr: '',
+        summary: '',
+        tags: '[]',
+      });
+      renderProjectImages();
+
+      setTimeout(() => {
+        const img = images.find(img => img.fileDataUrl === e.target.result);
+        if (img) {
+          img.status = 'done';
+          img.summary = '已导入截图，AI 分析待实现';
+          img.tags = JSON.stringify(['截图']);
+          renderProjectImages();
+        }
+      }, 1500 + i * 300);
+    };
+    reader.readAsDataURL(file);
+  });
+
+  event.target.value = '';
 }
 
 function retryImg(id) {
