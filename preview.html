@@ -702,6 +702,48 @@
   }
   .nd-dots.hidden { display: none; }
 
+  /* AI Generated note */
+  .ai-note {
+    padding: 20px; animation: fadeUp 0.4s ease;
+  }
+  .ai-note-date {
+    font-size: 11px; color: var(--text-tertiary);
+    letter-spacing: 2px; text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .ai-note-title {
+    font-family: "Noto Serif SC", "Songti SC", Georgia, serif;
+    font-size: 24px; font-weight: 700; color: var(--text-primary);
+    line-height: 1.35; margin-bottom: 20px;
+  }
+  .ai-note-section { margin-bottom: 20px; }
+  .ai-note-section-title {
+    font-size: 16px; font-weight: 600; color: var(--text-primary);
+    margin-bottom: 8px; line-height: 1.4;
+  }
+  .ai-note-text {
+    font-size: 14px; color: var(--text-secondary); line-height: 1.7;
+    white-space: pre-wrap;
+  }
+  .ai-note-image-block {
+    margin-bottom: 16px; border-radius: var(--radius-sm);
+    overflow: hidden; border: 1px solid var(--border);
+  }
+  .ai-note-image-block img {
+    width: 100%; display: block;
+  }
+  .ai-note-caption {
+    padding: 10px 14px; font-size: 13px; color: var(--text-secondary);
+    background: var(--bg); line-height: 1.5;
+  }
+  .ai-note-tags {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-top: 16px;
+  }
+  .ai-note-tag {
+    padding: 5px 14px; border-radius: 100px;
+    font-size: 12px; font-weight: 500;
+  }
+
   .note-tags-section { margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--border); }
   .note-tags-label { font-size: 11px; font-weight: 600; color: var(--text-tertiary); letter-spacing: 2px; text-transform: uppercase; cursor: pointer; margin-bottom: 10px; user-select: none; }
   .note-tags-label:hover { opacity: 0.6; }
@@ -848,7 +890,7 @@
     <div class="overlay-topbar">
       <button class="back" onclick="closeOverlay('overlay-note')"><span data-icon="arrowLeft" style="margin-right:4px"></span>返回</button>
       <span class="o-title"></span>
-      <button class="o-action" onclick="toggleEdit()">编辑</button>
+      <button class="o-action" onclick="generateSummary()" id="noteActionBtn">AI总结笔记</button>
     </div>
     <div class="overlay-scroll">
       <div class="note-content" id="noteEditor"></div>
@@ -1147,9 +1189,10 @@ function closeOverlay(id) {
   document.getElementById(id).classList.remove('open');
   if (id === 'overlay-note') {
     const btn = document.querySelector('#overlay-note .o-action');
-    btn.textContent = '编辑';
+    btn.textContent = 'AI总结笔记';
     btn.disabled = false;
     btn.style.opacity = '1';
+    btn.style.display = '';
   }
   renderNotes();
   updateNoteCount();
@@ -1442,9 +1485,10 @@ function openNoteDetail(projectId) {
 
   // Reset button
   const btn = document.querySelector('#overlay-note .o-action');
-  btn.textContent = '编辑';
+  btn.textContent = 'AI总结笔记';
   btn.style.display = '';
   btn.disabled = false;
+  btn.style.opacity = '1';
 }
 
 function setupCarouselDrag() {
@@ -1554,6 +1598,76 @@ document.getElementById('tagInputField').addEventListener('keydown', function(e)
   if (e.key === 'Escape') cancelTagInput();
 });
 
+function generateSummary() {
+  const note = allNotes.find(n => n.projectId === currentProjectId);
+  if (!note) return;
+
+  // Save current notes per image
+  const cards = document.querySelectorAll('.nd-card[data-index]');
+  cards.forEach(card => {
+    const idx = parseInt(card.dataset.index);
+    const textEl = card.querySelector('.nd-text');
+    if (textEl && note.imageNotes) {
+      note.imageNotes[idx] = textEl.textContent.trim();
+    }
+  });
+
+  const btn = document.querySelector('#overlay-note .o-action');
+  btn.textContent = 'AI 生成中...';
+  btn.disabled = true;
+  btn.style.opacity = '0.5';
+
+  setTimeout(() => {
+    const editor = document.getElementById('noteEditor');
+    const tagList = (() => { try { return JSON.parse(note.tags); } catch { return []; } })();
+    const project = projects.find(p => p.id === currentProjectId);
+    const imgUrls = note.imageUrls || [];
+    const imageNotes = note.imageNotes || [];
+
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('zh-CN');
+    const title = `${project ? project.title : '笔记'} · AI 总结`;
+
+    const summaryLines = imageNotes.filter(t => t).map(t => `- ${t}`);
+    const summaryText = summaryLines.length > 0
+      ? summaryLines.join('\n')
+      : '本次笔记涵盖了导入截图中的关键知识点，以下是整理后的完整内容。';
+
+    const formattedContent = `
+<div class="ai-note">
+  <div class="ai-note-date">${dateStr}</div>
+  <div class="ai-note-title">${title}</div>
+
+  <div class="ai-note-section">
+    <div class="ai-note-section-title">概览</div>
+    <div class="ai-note-text">本次共处理 ${imgUrls.length} 张截图。</div>
+  </div>
+
+  ${imgUrls.map((url, i) => `
+  <div class="ai-note-image-block">
+    <img src="${url}" />
+    ${imageNotes[i] ? `<div class="ai-note-caption">${imageNotes[i]}</div>` : ''}
+  </div>
+  `).join('')}
+
+  <div class="ai-note-section">
+    <div class="ai-note-section-title">要点总结</div>
+    <div class="ai-note-text">${summaryText}</div>
+  </div>
+
+  ${tagList.length > 0 ? `
+  <div class="ai-note-tags">
+    ${tagList.map(t => { const c = tagColor(t); return `<span class="ai-note-tag" style="background:${c.bg};color:${c.text}">${t}</span>`; }).join('')}
+  </div>` : ''}
+</div>`;
+
+    editor.innerHTML = formattedContent;
+    btn.textContent = '编辑';
+    btn.disabled = false;
+    btn.style.opacity = '1';
+  }, 1000);
+}
+
 function toggleEdit() {
   const btn = document.querySelector('#overlay-note .o-action');
   const isEditing = btn.textContent === '保存';
@@ -1562,19 +1676,26 @@ function toggleEdit() {
     // Save mode
     const note = allNotes.find(n => n.projectId === currentProjectId);
     if (note) {
-      const cards = document.querySelectorAll('.nd-card[data-index]');
-      cards.forEach(card => {
-        const idx = parseInt(card.dataset.index);
-        const textEl = card.querySelector('.nd-text');
-        if (textEl && note.imageNotes) {
-          note.imageNotes[idx] = textEl.textContent.trim();
-        }
-      });
+      const aiNote = document.querySelector('.ai-note');
+      if (aiNote) {
+        note.notesText = aiNote.querySelector('.ai-note-text')?.textContent || '';
+        note.imageNotes = [];
+        aiNote.querySelectorAll('.ai-note-caption').forEach(el => {
+          note.imageNotes.push(el.textContent.trim());
+        });
+      }
       renderNotes();
     }
     btn.textContent = '编辑';
+    // Remove edit styling
+    document.querySelectorAll('.ai-note-text, .ai-note-title, .ai-note-section-title, .ai-note-caption').forEach(el => {
+      el.contentEditable = 'false';
+      el.style.background = '';
+      el.style.borderRadius = '';
+      el.style.padding = '';
+    });
   } else {
-    // Edit mode — make AI note content editable if present
+    // Edit mode
     btn.textContent = '保存';
     const aiNote = document.querySelector('.ai-note');
     if (aiNote) {
@@ -1587,7 +1708,6 @@ function toggleEdit() {
         el.style.cursor = 'text';
       });
     }
-    // Card view is already contenteditable
   }
 }
 
