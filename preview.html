@@ -851,6 +851,15 @@ const TAG_PALETTE = [
   { bg: '#F5F5F4', text: '#44403C' },
 ];
 
+const PLACEHOLDER_IMAGES = [
+  'pic/0444fef320f4e1569a1c5026d74093ac.jpg',
+  'pic/0f263c438ec4c0ee88934537c7188826.jpg',
+  'pic/b40e7364bff07dff7d5999c19ce48ee3.jpg',
+  'pic/c5fcfe8eed43182cb9112022457cbd2f.jpg',
+  'pic/e1b59ad3b2b1815b4ea7bc1f55a228cd.jpg',
+  'pic/e41169e32aeadec4e794ccff5f4a62dc.jpg',
+];
+
 function tagColor(tag) {
   let hash = 0;
   for (let i = 0; i < tag.length; i++) {
@@ -870,11 +879,16 @@ function tagColor(tag) {
   projectImages[1001] = mockImageData.map((d, i) => ({
     id: imageIdCounter++, status: 'done', icon: d.icon, ocr: d.ocr,
     summary: d.summary, tags: JSON.stringify(d.tags),
+    imgSrc: PLACEHOLDER_IMAGES[i % PLACEHOLDER_IMAGES.length],
   }));
   projectImages[1002] = [
-    { id: imageIdCounter++, status: 'done', icon: 'code', ocr: 'print("Hello")\nx = 10\ndef func():\n    return x', summary: 'Python 基础语法包括变量赋值、函数定义和输出语句。', tags: ['代码', '示例'] },
-    { id: imageIdCounter++, status: 'done', icon: 'notes', ocr: 'list = [1,2,3]\ndict = {"a":1}\nfor i in list:', summary: 'Python 列表、字典和循环是数据处理的核心数据结构。', tags: ['代码', '概念'] },
-    { id: imageIdCounter++, status: 'done', icon: 'puzzle', ocr: 'class Animal:\n    def __init__(self):\nclass Dog(Animal):', summary: '面向对象编程的类和继承机制实现了代码复用。', tags: ['代码', '概念'] },
+    { id: imageIdCounter++, status: 'done', icon: 'code', ocr: 'print("Hello")\nx = 10\ndef func():\n    return x', summary: 'Python 基础语法包括变量赋值、函数定义和输出语句。', tags: '["代码","示例"]', imgSrc: PLACEHOLDER_IMAGES[4] },
+    { id: imageIdCounter++, status: 'done', icon: 'notes', ocr: 'list = [1,2,3]\ndict = {"a":1}\nfor i in list:', summary: 'Python 列表、字典和循环是数据处理的核心数据结构。', tags: '["代码","概念"]', imgSrc: PLACEHOLDER_IMAGES[5] },
+    { id: imageIdCounter++, status: 'done', icon: 'puzzle', ocr: 'class Animal:\n    def __init__(self):\nclass Dog(Animal):', summary: '面向对象编程的类和继承机制实现了代码复用。', tags: '["代码","概念"]', imgSrc: PLACEHOLDER_IMAGES[0] },
+  ];
+  projectImages[1003] = [
+    { id: imageIdCounter++, status: 'done', icon: 'link', ocr: '链表: Node → Node → Node\n每个节点包含 data 和 next 指针', summary: '链表通过指针连接节点，支持高效的插入和删除操作。', tags: '["概念","图表"]', imgSrc: PLACEHOLDER_IMAGES[1] },
+    { id: imageIdCounter++, status: 'done', icon: 'book', ocr: '栈: 后进先出 (LIFO)\n队列: 先进先出 (FIFO)', summary: '栈和队列是两种基本的线性数据结构，分别遵循 LIFO 和 FIFO 原则。', tags: '["概念","定义"]', imgSrc: PLACEHOLDER_IMAGES[2] },
   ];
   projectImages[1003] = [
     { id: imageIdCounter++, status: 'done', icon: 'link', ocr: '链表: Node → Node → Node\n每个节点包含 data 和 next 指针', summary: '链表通过指针连接节点，支持高效的插入和删除操作。', tags: ['概念', '图表'] },
@@ -901,7 +915,7 @@ function tagColor(tag) {
       content: `# ${n.title}\n\n## 一、核心要点\n\n${imgs.map((img, j) => `${img.summary} [图${j+1}]`).join('\n\n')}`,
       tags: JSON.stringify(Array.from(tagSet)),
       imageCount: imgs.length,
-      imageUrls: [],
+      imageUrls: imgs.map(img => img.imgSrc || img.fileDataUrl || '').filter(Boolean),
       updatedAt: n.date,
     };
   });
@@ -1011,11 +1025,11 @@ function getImageCardHTML(img, index) {
   const isFailed = img.status === 'failed';
   const isDone = img.status === 'done';
 
-  const showImg = img.fileDataUrl;
+  const imgSrc = img.fileDataUrl || img.imgSrc || PLACEHOLDER_IMAGES[index % PLACEHOLDER_IMAGES.length];
   return `
     <div class="img-card fade-in" style="animation-delay:${index*0.08}s">
-      <div class="img-placeholder">
-        ${showImg ? `<img src="${img.fileDataUrl}" style="width:100%;height:100%;object-fit:cover;display:block" />` : `<span class="icon-big">${icons[img.icon] || icons.notes}</span>`}
+      <div class="img-placeholder" style="${imgSrc ? 'padding:0;overflow:hidden' : ''}">
+        ${imgSrc ? `<img src="${imgSrc}" style="width:100%;height:100%;object-fit:cover;display:block" />` : `<span class="icon-big">${icons[img.icon] || icons.notes}</span>`}
         ${isProcessing ? '<div class="img-overlay"><div class="spinner"></div><span>分析中...</span></div>' : ''}
         ${isFailed ? '<div class="img-overlay failed"><span>分析失败</span><button class="retry" onclick="retryImg('+img.id+')">重试</button></div>' : ''}
       </div>
@@ -1058,6 +1072,7 @@ function simulateImport() {
       id: imageIdCounter++, status: i === 1 ? 'processing' : 'done',
       icon: d.icon, ocr: d.ocr || d.summary,
       summary: d.summary, tags: JSON.stringify(d.tags),
+      imgSrc: PLACEHOLDER_IMAGES[(images.length + i) % PLACEHOLDER_IMAGES.length],
     });
   });
   renderProjectImages();
