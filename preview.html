@@ -835,6 +835,28 @@ function startCarousel() {
   carouselTimer = setInterval(rotateCarousel, 2000);
 }
 
+// ===================== TAG COLOR UTILITY =====================
+const TAG_PALETTE = [
+  { bg: '#FEE2E2', text: '#991B1B' },
+  { bg: '#E0E7FF', text: '#3730A3' },
+  { bg: '#D1FAE5', text: '#065F46' },
+  { bg: '#FEF3C7', text: '#92400E' },
+  { bg: '#E0F2FE', text: '#075985' },
+  { bg: '#F3E8FF', text: '#6B21A8' },
+  { bg: '#FCE7F3', text: '#9D174D' },
+  { bg: '#ECFDF5', text: '#065F46' },
+  { bg: '#FFF7ED', text: '#9A3412' },
+  { bg: '#F5F5F4', text: '#44403C' },
+];
+
+function tagColor(tag) {
+  let hash = 0;
+  for (let i = 0; i < tag.length; i++) {
+    hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return TAG_PALETTE[Math.abs(hash) % TAG_PALETTE.length];
+}
+
 // ===================== INIT =====================
 (function init() {
   initIcons();
@@ -1084,27 +1106,6 @@ function editTags(el, id) {
   };
 }
 
-// ===================== TAG COLOR UTILITY =====================
-const TAG_PALETTE = [
-  { bg: '#FEE2E2', text: '#991B1B' },
-  { bg: '#E0E7FF', text: '#3730A3' },
-  { bg: '#D1FAE5', text: '#065F46' },
-  { bg: '#FEF3C7', text: '#92400E' },
-  { bg: '#E0F2FE', text: '#075985' },
-  { bg: '#F3E8FF', text: '#6B21A8' },
-  { bg: '#FCE7F3', text: '#9D174D' },
-  { bg: '#ECFDF5', text: '#065F46' },
-  { bg: '#FFF7ED', text: '#9A3412' },
-  { bg: '#F5F5F4', text: '#44403C' },
-];
-
-function tagColor(tag) {
-  let hash = 0;
-  for (let i = 0; i < tag.length; i++) {
-    hash = tag.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return TAG_PALETTE[Math.abs(hash) % TAG_PALETTE.length];
-}
 function renderNotes() {
   const list = document.getElementById('notesList');
   if (allNotes.length === 0) {
