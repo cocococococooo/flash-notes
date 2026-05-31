@@ -847,8 +847,8 @@
   <div class="overlay" id="overlay-note">
     <div class="overlay-topbar">
       <button class="back" onclick="closeOverlay('overlay-note')"><span data-icon="arrowLeft" style="margin-right:4px"></span>返回</button>
-      <span class="o-title">笔记</span>
-      <button class="o-action" onclick="generateSummary()">生成项目总结</button>
+      <span class="o-title"></span>
+      <button class="o-action" onclick="generateSummary()">AI总结笔记</button>
     </div>
     <div class="overlay-scroll">
       <div class="note-content" id="noteEditor"></div>
@@ -1147,7 +1147,7 @@ function closeOverlay(id) {
   document.getElementById(id).classList.remove('open');
   if (id === 'overlay-note') {
     const btn = document.querySelector('#overlay-note .o-action');
-    btn.textContent = '生成项目总结';
+    btn.textContent = 'AI总结笔记';
     btn.disabled = false;
     btn.style.opacity = '1';
   }
