@@ -583,6 +583,23 @@
   }
   .note-image-grid .nig-item img { width:100%; height:100%; object-fit:cover; display:block; }
 
+  .note-img-block { margin-bottom: 20px; }
+  .note-img-preview {
+    width: 100%; border-radius: var(--radius-sm); overflow: hidden;
+    background: #F4F4F5; border: 1px solid var(--border);
+  }
+  .note-img-preview img { width: 100%; display: block; }
+  .note-img-caption {
+    font-size: 13px; color: var(--text-secondary); line-height: 1.6;
+    padding: 10px 8px 4px; outline: none; border-radius: 6px;
+    transition: background 0.15s; cursor: text;
+  }
+  .note-img-caption:focus { background: #F4F4F5; }
+  .note-img-caption:empty:before {
+    content: attr(data-placeholder); color: var(--text-quaternary);
+  }
+  .note-overall-notes { margin-top: 8px; }
+
   .note-tags-section { margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--border); }
   .note-tags-label { font-size: 11px; font-weight: 600; color: var(--text-tertiary); letter-spacing: 2px; text-transform: uppercase; cursor: pointer; margin-bottom: 10px; user-select: none; }
   .note-tags-label:hover { opacity: 0.6; }
@@ -902,10 +919,6 @@ function tagColor(tag) {
     { id: imageIdCounter++, status: 'done', icon: 'link', ocr: '链表: Node → Node → Node\n每个节点包含 data 和 next 指针', summary: '链表通过指针连接节点，支持高效的插入和删除操作。', tags: '["概念","图表"]', imgSrc: PLACEHOLDER_IMAGES[1] },
     { id: imageIdCounter++, status: 'done', icon: 'book', ocr: '栈: 后进先出 (LIFO)\n队列: 先进先出 (FIFO)', summary: '栈和队列是两种基本的线性数据结构，分别遵循 LIFO 和 FIFO 原则。', tags: '["概念","定义"]', imgSrc: PLACEHOLDER_IMAGES[2] },
   ];
-  projectImages[1003] = [
-    { id: imageIdCounter++, status: 'done', icon: 'link', ocr: '链表: Node → Node → Node\n每个节点包含 data 和 next 指针', summary: '链表通过指针连接节点，支持高效的插入和删除操作。', tags: ['概念', '图表'] },
-    { id: imageIdCounter++, status: 'done', icon: 'book', ocr: '栈: 后进先出 (LIFO)\n队列: 先进先出 (FIFO)', summary: '栈和队列是两种基本的线性数据结构，分别遵循 LIFO 和 FIFO 原则。', tags: ['概念', '定义'] },
-  ];
 
   // Generate mock notes from project image summaries
   const noteTemplates = [
@@ -924,10 +937,12 @@ function tagColor(tag) {
       id: i + 1,
       projectId: n.pid,
       projectTitle: proj ? proj.title : '',
-      content: `# ${n.title}\n\n## 一、核心要点\n\n${imgs.map((img, j) => `${img.summary} [图${j+1}]`).join('\n\n')}`,
+      content: '',
       tags: JSON.stringify(Array.from(tagSet)),
       imageCount: imgs.length,
       imageUrls: imgs.map(img => img.imgSrc || img.fileDataUrl || '').filter(Boolean),
+      imageNotes: imgs.map(() => ''),
+      notesText: '',
       updatedAt: n.date,
     };
   });
@@ -1135,19 +1150,16 @@ function handleFilePick(event) {
       processed++;
 
       if (processed === total) {
-        // Create a note from imported images
-        const tagSet = new Set();
-        images.forEach(img => {
-          try { JSON.parse(img.tags).forEach(t => tagSet.add(t)); } catch(e) {}
-        });
         const note = {
           id: allNotes.length + 1,
           projectId: currentProjectId,
-          projectTitle: '新项目',
-          content: `# 笔记\n\n## 一、核心要点\n\n${images.map((img, j) => `${img.summary} [图${j+1}]`).join('\n\n')}`,
-          tags: JSON.stringify(Array.from(tagSet)),
+          projectTitle: projects.find(p => p.id === currentProjectId)?.title || '新项目',
+          content: '',
+          tags: JSON.stringify(['截图']),
           imageCount: images.length,
           imageUrls: images.map(img => img.fileDataUrl || img.imgSrc || '').filter(Boolean),
+          imageNotes: images.map(() => ''),
+          notesText: '',
           updatedAt: new Date().toISOString(),
         };
         const existingIdx = allNotes.findIndex(n => n.projectId === currentProjectId);
@@ -1232,13 +1244,14 @@ function renderNotes() {
     }
     const displayTags = tagList.slice(0, 3);
     const moreCount = tagList.length - 3;
-    const plainText = n.content.replace(/[#*\[\]!>]/g,'').replace(/\n+/g,' ').trim();
+    const plainText = n.notesText || '';
+
     return `
     <div class="note-card fade-in" style="animation-delay:${i*0.06}s" onclick="openNoteDetail(${n.projectId})">
       <div class="nimg-stack">${stackHtml}</div>
       <div class="ntxt">
-        <div class="nct">${n.content ? n.content.split('\n').find(l => l.startsWith('# '))?.replace(/^# /,'') || '无标题' : '无标题'}</div>
-        <div class="nce">${plainText.substring(0, 140)}</div>
+        <div class="nct">${n.projectTitle || '无标题'}</div>
+        <div class="nce">${plainText.substring(0, 140) || '暂无内容'}</div>
         <div class="nmeta">
           <span class="nmi">${icons.camera} ${imgCount} 张截图</span>
           <span class="ndot">·</span>
@@ -1264,26 +1277,23 @@ function openNoteDetail(projectId) {
   if (note) {
     let tagList = [];
     try { tagList = JSON.parse(note.tags); } catch(e) {}
-    const lines = note.content.split('\n').filter(l => l.trim());
+    const imgUrls = note.imageUrls || [];
     let html = '';
 
-    // Image preview strip
-    const imgUrls = note.imageUrls || [];
-    if (imgUrls.length > 0) {
-      html += `<div class="note-image-grid">${imgUrls.map(url => `<div class="nig-item"><img src="${url}" /></div>`).join('')}</div>`;
-    }
-
-    // Editable text content
-    lines.forEach(line => {
-      const t = line.trim();
-      if (t.startsWith('# ')) html += `<div class="note-title-edit" contenteditable="true">${t.replace(/^# /,'')}</div>`;
-      else if (t.startsWith('## ')) html += `<div class="note-subtitle-edit" contenteditable="true">${t.replace(/^## /,'')}</div>`;
-      else if (t.match(/^!\[.*\]\(.*\)/)) {
-        const iconName = imgs.length > 0 && imgs[0].icon ? imgs[0].icon : 'notes';
-        html += `<div class="note-img-thumb" onclick="openViewer()"><span class="e">${icons[iconName]}</span></div>`;
-      }
-      else if (t) html += `<div class="note-para" contenteditable="true">${t}</div>`;
+    // Each imported image as a preview card with editable caption
+    imgUrls.forEach((url, i) => {
+      html += `<div class="note-img-block">
+        <div class="note-img-preview"><img src="${url}" /></div>
+        <div class="note-img-caption" contenteditable="true" data-placeholder="添加这张图片的备注...">${note.imageNotes && note.imageNotes[i] ? note.imageNotes[i] : ''}</div>
+      </div>`;
     });
+
+    // Editable text area for overall notes
+    html += `<div class="note-overall-notes">
+      <div class="note-subtitle-edit" contenteditable="true">笔记</div>
+      <div class="note-para" contenteditable="true">${note.notesText || '在此输入笔记内容...'}</div>
+    </div>`;
+
     // Tags section
     html += `<div class="note-tags-section">
       <div class="note-tags-label" onclick="toggleNoteTags(this)">标签 &#9660;</div>
@@ -1301,15 +1311,25 @@ function openNoteDetail(projectId) {
 }
 
 function generateSummary() {
+  const note = allNotes.find(n => n.projectId === currentProjectId);
+  if (!note) return;
+
+  // Save tags
   const tagsInput = document.getElementById('noteTagsInput');
   if (tagsInput) {
     const tagList = tagsInput.value.split(/[,，]/).map(t => t.trim()).filter(Boolean);
-    const note = allNotes.find(n => n.projectId === currentProjectId);
-    if (note) {
-      note.tags = JSON.stringify(tagList);
-      renderNotes();
-    }
+    note.tags = JSON.stringify(tagList);
   }
+
+  // Save image captions
+  const captions = document.querySelectorAll('.note-img-caption');
+  note.imageNotes = Array.from(captions).map(el => el.textContent.trim());
+
+  // Save overall notes
+  const paras = document.querySelectorAll('.note-overall-notes .note-para');
+  note.notesText = Array.from(paras).map(el => el.textContent.trim()).join('\n');
+
+  renderNotes();
   const btn = document.querySelector('#overlay-note .o-action');
   btn.textContent = '已生成 ✓';
   btn.disabled = true;
