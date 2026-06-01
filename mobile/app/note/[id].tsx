@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -10,21 +10,26 @@ import {
   Alert,
   StyleSheet,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Dimensions,
+  FlatList,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { api } from "../../services/api";
 import IconPark from "../../components/IconPark";
 import { API_BASE_URL } from "../../constants/config";
 
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+
 interface Note {
   id: number;
   projectId: number;
   content: string;
-  tags: string;
+  tags?: string;
   updatedAt: string;
 }
 
-// Minimal Markdown to editable blocks
 interface Block {
   type: "title" | "subtitle" | "heading" | "paragraph" | "image" | "listItem";
   text: string;
@@ -85,17 +90,19 @@ export default function NoteScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [tagsInput, setTagsInput] = useState("");
-  const [showTagsInput, setShowTagsInput] = useState(false);
+  const [noteTitle, setNoteTitle] = useState("");
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   const loadNote = useCallback(async () => {
     try {
       const data = await api.getNote(projectId);
       setNote(data);
-      setBlocks(parseContent(data.content, API_BASE_URL));
-      let tagList: string[] = [];
-      try { tagList = JSON.parse(data.tags); } catch {}
-      setTagsInput(tagList.join(", "));
+      const parsedBlocks = parseContent(data.content, API_BASE_URL);
+      setBlocks(parsedBlocks);
+      
+      const firstTitle = parsedBlocks.find(b => b.type === "title");
+      setNoteTitle(firstTitle?.text || "笔记");
     } catch (e) {
       console.error(e);
     } finally {
@@ -111,9 +118,7 @@ export default function NoteScreen() {
     setSaving(true);
     try {
       const md = blocksToMarkdown(blocks);
-      const tagList = tagsInput.split(/[,，]/).map(t => t.trim()).filter(Boolean);
-      const tags = JSON.stringify(tagList);
-      const updated = await api.updateNote(projectId, md, tags);
+      const updated = await api.updateNote(projectId, md);
       setNote(updated);
       Alert.alert("已保存");
     } catch (e: any) {
@@ -123,11 +128,18 @@ export default function NoteScreen() {
     }
   };
 
+  const handleShare = () => {
+    Alert.alert("分享", "分享功能开发中...");
+  };
+
   const updateBlockText = (index: number, text: string) => {
     const copy = [...blocks];
     copy[index] = { ...copy[index], text };
     setBlocks(copy);
   };
+
+  const imageBlocks = blocks.filter(b => b.type === "image" && b.src);
+  const textBlocks = blocks.filter(b => b.type !== "image");
 
   if (loading) {
     return (
@@ -138,37 +150,85 @@ export default function NoteScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      {/* Top Navigation Bar */}
       <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => router.back()} style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
-          <IconPark name="arrowLeft" size={16} color="#18181B" />
-          <Text style={styles.backText}>返回</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.saveBtn, saving && styles.disabled]}
-          onPress={handleSave}
-          disabled={saving}
+        <TouchableOpacity 
+          style={styles.backBtn} 
+          onPress={() => router.back()}
         >
-          <Text style={styles.saveBtnText}>{saving ? "保存中..." : "保存"}</Text>
+          <IconPark name="arrowLeft" size={20} color="#18181B" />
         </TouchableOpacity>
+        
+        <Text style={styles.topBarTitle} numberOfLines={1}>
+          {noteTitle}
+        </Text>
+        
+        <View style={styles.topBarActions}>
+          <TouchableOpacity 
+            style={[styles.actionBtn, saving && styles.actionBtnDisabled]}
+            onPress={handleSave}
+            disabled={saving}
+          >
+            <Text style={styles.actionBtnText}>
+              {saving ? "保存中..." : "保存"}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
+            <IconPark name="share" size={18} color="#18181B" />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        {blocks.length === 0 && (
-          <Text style={styles.empty}>暂无笔记内容</Text>
-        )}
-        {blocks.map((block, i) => {
-          if (block.type === "image" && block.src) {
-            return (
+      {/* Image Carousel */}
+      {imageBlocks.length > 0 && (
+        <View style={styles.carouselContainer}>
+          <FlatList
+            data={imageBlocks}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={(e) => {
+              const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+              setCurrentImageIndex(index);
+            }}
+            renderItem={({ item }) => (
               <TouchableOpacity
-                key={i}
-                onPress={() => setPreviewImage(block.src!)}
+                activeOpacity={0.9}
+                onPress={() => setPreviewImage(item.src!)}
               >
-                <Image source={{ uri: block.src }} style={styles.inlineImage} />
+                <Image source={{ uri: item.src }} style={styles.carouselImage} />
               </TouchableOpacity>
-            );
-          }
+            )}
+            keyExtractor={(item, index) => `image-${index}`}
+          />
+          {/* Dots Indicator */}
+          <View style={styles.dotsContainer}>
+            {imageBlocks.map((_, index) => (
+              <View
+                key={index}
+                style={[styles.dot, index === currentImageIndex && styles.dotActive]}
+              />
+            ))}
+          </View>
+        </View>
+      )}
 
+      {/* Text Content Area */}
+      <ScrollView 
+        ref={scrollViewRef}
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+        keyboardDismissMode="interactive"
+      >
+        {textBlocks.length === 0 && imageBlocks.length === 0 && (
+          <Text style={styles.empty}>开始编辑笔记内容</Text>
+        )}
+        
+        {textBlocks.map((block, i) => {
           const textStyle =
             block.type === "title"
               ? styles.titleText
@@ -185,47 +245,29 @@ export default function NoteScreen() {
               key={i}
               style={textStyle}
               value={block.text}
-              onChangeText={(val) => updateBlockText(i, val)}
+              onChangeText={(val) => updateBlockText(blocks.indexOf(block), val)}
               multiline
-              placeholder={block.type === "title" ? "输入标题..." : "输入内容..."}
-              placeholderTextColor="#CCC"
+              placeholder={
+                block.type === "title"
+                  ? "输入标题..."
+                  : block.type === "subtitle"
+                  ? "输入副标题..."
+                  : "输入内容..."
+              }
+              placeholderTextColor="#C4C4C4"
             />
           );
         })}
-
-        {/* Tags Section */}
-        <View style={styles.tagsSection}>
-          <TouchableOpacity onPress={() => setShowTagsInput(!showTagsInput)}>
-            <Text style={styles.tagsLabel}>
-              标签 {showTagsInput ? "▲" : "▼"}
-            </Text>
-          </TouchableOpacity>
-          {showTagsInput && (
-            <TextInput
-              style={styles.tagsInput}
-              value={tagsInput}
-              onChangeText={setTagsInput}
-              placeholder="输入标签，用逗号分隔"
-              placeholderTextColor="#AAA"
-            />
-          )}
-          <View style={styles.tagsRow}>
-            {tagsInput.split(/[,，]/).map(t => t.trim()).filter(Boolean).map((tag, i) => (
-              <View key={i} style={styles.tag}>
-                <Text style={styles.tagText}>{tag}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
       </ScrollView>
 
+      {/* Image Preview Modal */}
       <Modal visible={!!previewImage} transparent animationType="fade">
         <View style={styles.modalBg}>
           <TouchableOpacity
             style={styles.modalClose}
             onPress={() => setPreviewImage(null)}
           >
-            <Text style={styles.modalCloseText}>关闭</Text>
+            <IconPark name="close" size={24} color="#FFF" />
           </TouchableOpacity>
           {previewImage && (
             <Image
@@ -236,101 +278,184 @@ export default function NoteScreen() {
           )}
         </View>
       </Modal>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FAFAFA" },
-  center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#FAFAFA" },
-  topBar: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingTop: 56,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F0EE",
+  container: {
+    flex: 1,
     backgroundColor: "#FAFAFA",
   },
-  backText: { fontSize: 15, color: "#18181B", fontWeight: "600" },
-  saveBtn: {
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#FAFAFA",
+  },
+  topBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: 44,
+    paddingBottom: 12,
+    backgroundColor: "#FAFAFA",
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F0EE",
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#FFF",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  topBarTitle: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#18181B",
+    textAlign: "center",
+    marginHorizontal: 12,
+  },
+  topBarActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  actionBtn: {
     backgroundColor: "#18181B",
     borderRadius: 100,
-    paddingHorizontal: 18,
+    paddingHorizontal: 16,
     paddingVertical: 8,
   },
-  saveBtnText: { color: "#FFF", fontWeight: "600", fontSize: 14 },
-  disabled: { opacity: 0.5 },
-  content: { padding: 20, paddingBottom: 60 },
-  empty: { textAlign: "center", color: "#A1A1AA", marginTop: 40 },
+  actionBtnDisabled: {
+    opacity: 0.5,
+  },
+  actionBtnText: {
+    color: "#FFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  shareBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#FFF",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  carouselContainer: {
+    backgroundColor: "#FFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F0EE",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  carouselImage: {
+    width: SCREEN_WIDTH,
+    height: 300,
+    resizeMode: "contain",
+  },
+  dotsContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 12,
+    gap: 6,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#D4D4D8",
+  },
+  dotActive: {
+    width: 18,
+    borderRadius: 3,
+    backgroundColor: "#18181B",
+  },
+  scrollView: {
+    flex: 1,
+  },
+  content: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  empty: {
+    textAlign: "center",
+    color: "#A1A1AA",
+    marginTop: 60,
+    fontSize: 15,
+  },
   titleText: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: "800",
     color: "#18181B",
-    marginBottom: 6,
-    lineHeight: 34,
+    marginBottom: 8,
+    lineHeight: 38,
     letterSpacing: -0.5,
   },
   subtitleText: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#27272A",
-    marginTop: 20,
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#18181B",
+    marginTop: 24,
     marginBottom: 10,
-    lineHeight: 26,
+    lineHeight: 28,
   },
   headingText: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "600",
-    color: "#3F3F46",
-    marginTop: 14,
+    color: "#27272A",
+    marginTop: 18,
     marginBottom: 8,
-    lineHeight: 22,
+    lineHeight: 24,
   },
   paragraphText: {
-    fontSize: 15,
-    color: "#52525B",
+    fontSize: 16,
+    color: "#3F3F46",
     lineHeight: 26,
-    marginBottom: 10,
+    marginBottom: 8,
   },
   listItemText: {
-    fontSize: 15,
-    color: "#52525B",
+    fontSize: 16,
+    color: "#3F3F46",
     lineHeight: 24,
     paddingLeft: 16,
     marginBottom: 6,
   },
-  inlineImage: {
-    width: "100%",
-    height: 160,
-    borderRadius: 12,
-    marginVertical: 12,
-    resizeMode: "cover",
-  },
-  tagsSection: { marginTop: 32, paddingTop: 20, borderTopWidth: 1, borderTopColor: "#F0F0EE" },
-  tagsLabel: { fontSize: 11, fontWeight: "600", color: "#A1A1AA", letterSpacing: 2, textTransform: "uppercase", marginBottom: 10 },
-  tagsInput: { borderWidth: 1, borderColor: "#E4E4E7", borderRadius: 10, padding: 10, fontSize: 14, color: "#18181B", marginBottom: 10, backgroundColor: "#FFF" },
-  tagsRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  tag: { backgroundColor: "#F4F4F5", paddingHorizontal: 12, paddingVertical: 5, borderRadius: 100 },
-  tagText: { fontSize: 12, color: "#18181B", fontWeight: "500" },
   modalBg: {
     flex: 1,
-    backgroundColor: "rgba(24,24,27,0.95)",
+    backgroundColor: "rgba(0,0,0,0.95)",
     justifyContent: "center",
     alignItems: "center",
   },
   modalClose: {
     position: "absolute",
-    top: 50,
+    top: 60,
     right: 20,
     zIndex: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: "rgba(255,255,255,0.1)",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  modalCloseText: { color: "#FFF", fontSize: 14, fontWeight: "500" },
-  previewImage: { width: "90%", height: "70%" },
+  previewImage: {
+    width: "90%",
+    height: "70%",
+  },
 });

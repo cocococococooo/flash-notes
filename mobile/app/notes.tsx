@@ -1,9 +1,10 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, useMemo } from "react";
 import {
   View,
   Text,
   FlatList,
   TouchableOpacity,
+  ScrollView,
   StyleSheet,
   ActivityIndicator,
   Image,
@@ -47,6 +48,7 @@ export default function NotesScreen() {
   const router = useRouter();
   const [notes, setNotes] = useState<NoteItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
   const loadNotes = useCallback(async () => {
     try {
@@ -65,6 +67,29 @@ export default function NotesScreen() {
     }, [loadNotes])
   );
 
+  const allTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    notes.forEach((note) => {
+      try {
+        const tags = JSON.parse(note.tags || "[]");
+        tags.forEach((tag: string) => tagSet.add(tag));
+      } catch {}
+    });
+    return Array.from(tagSet);
+  }, [notes]);
+
+  const filteredNotes = useMemo(() => {
+    if (!selectedTag) return notes;
+    return notes.filter((note) => {
+      try {
+        const tags = JSON.parse(note.tags || "[]");
+        return tags.includes(selectedTag);
+      } catch {
+        return false;
+      }
+    });
+  }, [notes, selectedTag]);
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -77,11 +102,42 @@ export default function NotesScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>全部笔记</Text>
-        <Text style={styles.count}>{notes.length} 篇</Text>
+        <Text style={styles.count}>{filteredNotes.length} 篇</Text>
       </View>
 
+      {/* Tag Filter */}
+      {allTags.length > 0 && (
+        <View style={styles.filterContainer}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterScroll}
+          >
+            <TouchableOpacity
+              style={[styles.filterTag, !selectedTag && styles.filterTagActive]}
+              onPress={() => setSelectedTag(null)}
+            >
+              <Text style={[styles.filterTagText, !selectedTag && styles.filterTagTextActive]}>
+                全部
+              </Text>
+            </TouchableOpacity>
+            {allTags.map((tag, i) => (
+              <TouchableOpacity
+                key={i}
+                style={[styles.filterTag, selectedTag === tag && styles.filterTagActive]}
+                onPress={() => setSelectedTag(selectedTag === tag ? null : tag)}
+              >
+                <Text style={[styles.filterTagText, selectedTag === tag && styles.filterTagTextActive]}>
+                  {tag}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
       <FlatList
-        data={notes}
+        data={filteredNotes}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => {
@@ -186,10 +242,34 @@ const styles = StyleSheet.create({
     alignItems: "baseline",
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 16,
+    paddingBottom: 12,
   },
   title: { fontSize: 26, fontWeight: "700", color: "#18181B" },
   count: { fontSize: 13, fontWeight: "500", color: "#A1A1AA" },
+  filterContainer: {
+    marginBottom: 8,
+  },
+  filterScroll: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  filterTag: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 100,
+    backgroundColor: "#F4F4F5",
+  },
+  filterTagActive: {
+    backgroundColor: "#18181B",
+  },
+  filterTagText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#71717A",
+  },
+  filterTagTextActive: {
+    color: "#FFF",
+  },
   list: { paddingHorizontal: 16, paddingBottom: 100 },
 
   card: {

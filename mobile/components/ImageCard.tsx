@@ -49,7 +49,7 @@ export default function ImageCard({ image, baseUrl, onUpdate }: Props) {
     setEditingTags(false);
     const tagList = tagsText
       .split(/[,，]/)
-      .map((t) => t.trim())
+      .map((t: string) => t.trim())
       .filter(Boolean);
     onUpdate(image.id, { tags: JSON.stringify(tagList) });
   };

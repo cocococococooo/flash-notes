@@ -34,7 +34,6 @@ def delete_project(project_id: int, db: Session = Depends(get_db)):
     project = db.query(models.Project).filter(models.Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    # Clean up uploaded files
     images = db.query(models.Image).filter(models.Image.projectId == project_id).all()
     for img in images:
         if os.path.exists(img.localUri):
@@ -70,13 +69,12 @@ async def upload_images(project_id: int, files: List[UploadFile] = File(...), db
         db.refresh(image)
         created_images.append(image)
 
-        # Start AI analysis in background thread
-        threading.Thread(target=_analyze_image_task, args=(image.id, file_path, db), daemon=True).start()
+        threading.Thread(target=_analyze_image_task, args=(image.id, file_path), daemon=True).start()
 
     return created_images
 
 
-def _analyze_image_task(image_id: int, file_path: str, db: Session):
+def _analyze_image_task(image_id: int, file_path: str):
     from app.database import SessionLocal
     db = SessionLocal()
     try:

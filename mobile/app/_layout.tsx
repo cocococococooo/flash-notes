@@ -37,9 +37,9 @@ export default function RootLayout() {
             backgroundColor: "#FFF",
             borderTopColor: "#F0F0EE",
             borderTopWidth: 1,
-            height: 85,
-            paddingTop: 6,
-            paddingBottom: 24,
+            height: 90,
+            paddingTop: 8,
+            paddingBottom: 34,
           },
           tabBarShowLabel: false,
         }}

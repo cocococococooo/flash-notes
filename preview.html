@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Serif+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
   :root {
     --accent: #18181B;
@@ -178,40 +179,6 @@
     text-transform: uppercase;
   }
 
-  .create-row {
-    display: flex;
-    gap: 8px;
-    padding: 0 20px;
-    margin-bottom: 18px;
-  }
-  .create-row input {
-    flex: 1;
-    border: 1.5px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 13px 14px;
-    font-size: 15px;
-    background: var(--surface);
-    outline: none;
-    font-family: inherit;
-    transition: border-color 0.2s;
-  }
-  .create-row input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
-  .create-row input::placeholder { color: var(--text-quaternary); }
-  .create-row .btn-plus {
-    width: 48px;
-    border: none;
-    background: var(--text-primary);
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    font-family: inherit;
-    transition: all 0.2s;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .create-row .btn-plus svg { width: 20px; height: 20px; color: #FFF; }
-  .create-row .btn-plus:hover { background: var(--accent); }
-
   .project-list { padding: 0 20px; }
   .project-card {
     display: flex;
@@ -260,12 +227,149 @@
   .empty-projects .ep-t { font-size: 15px; font-weight: 500; color: var(--text-tertiary); }
   .empty-projects .ep-h { font-size: 13px; color: var(--text-quaternary); margin-top: 4px; }
 
+  /* OCR Result Card */
+  .ocr-result-card {
+    background: var(--surface);
+    border-radius: var(--radius-md);
+    margin-bottom: 14px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    animation: fadeUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .ocr-result-card .ocr-img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    display: block;
+  }
+  .ocr-result-card .ocr-img-overlay {
+    position: relative;
+    width: 100%;
+    height: 180px;
+    background: #F4F4F5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .ocr-result-card .ocr-img-overlay .ocr-spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid rgba(255,255,255,0.3);
+    border-top-color: #FFF;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .ocr-result-card .ocr-img-overlay .ocr-status-text {
+    color: #FFF;
+    font-size: 13px;
+    font-weight: 500;
+    margin-left: 10px;
+  }
+  .ocr-result-card .ocr-img-overlay .ocr-done-icon {
+    color: #FFF;
+    font-size: 28px;
+  }
+  .ocr-result-card .ocr-text-wrap {
+    padding: 12px;
+    cursor: pointer;
+  }
+  .ocr-result-card .ocr-text-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+  }
+  .ocr-result-card .ocr-text-content {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    background: #F4F4F5;
+    padding: 10px;
+    border-radius: 8px;
+    margin-top: 6px;
+    font-family: "SF Mono", Monaco, "Cascadia Code", monospace;
+    white-space: pre-wrap;
+    display: none;
+  }
+  .ocr-result-card .ocr-text-content.open { display: block; }
+
+  /* Note detail image + OCR block */
+  .note-img-block {
+    margin-bottom: 20px;
+  }
+  .note-img-block .note-img-thumb {
+    width: 100%;
+    height: 200px;
+    background: #F4F4F5;
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-bottom: 8px;
+  }
+  .note-img-block .note-img-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .note-img-block .note-img-thumb:hover { background: #E8E8EA; }
+  .note-img-ocr-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    font-size: 13px;
+    color: var(--text-tertiary);
+    font-weight: 500;
+  }
+  .ocr-spinner-sm {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #E4E4E7;
+    border-top-color: #18181B;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+  }
+  .note-img-ocr-result {
+    padding: 4px 0;
+  }
+  .ocr-result-toggle {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    cursor: pointer;
+    user-select: none;
+    transition: opacity 0.2s;
+  }
+  .ocr-result-toggle:hover { opacity: 0.6; }
+  .ocr-result-text {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.7;
+    background: #F4F4F5;
+    padding: 12px;
+    border-radius: 8px;
+    margin-top: 6px;
+    font-family: "SF Mono", Monaco, "Cascadia Code", monospace;
+    white-space: pre-wrap;
+    display: none;
+  }
+  .ocr-result-text.open { display: block; }
+
   /* ===== TAB 2: NOTES LIST ===== */
   .notes-header {
     display: flex;
     justify-content: space-between;
-    align-items: baseline;
+    align-items: center;
     padding: 24px 20px 18px;
+  }
+  .notes-header-left {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
   }
   .notes-header h2 {
     font-family: "Noto Serif SC", "Songti SC", Georgia, serif;
@@ -275,6 +379,19 @@
     letter-spacing: 0.3px;
   }
   .notes-header .nc { font-size: 13px; color: var(--text-tertiary); font-weight: 500; font-family: "Inter", sans-serif; }
+  .note-add-btn {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: var(--text-primary);
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .note-add-btn:hover { background: #F4F4F5; border-color: var(--border-hover); }
+  .note-add-btn:active { transform: scale(0.92); }
 
   .notes-list { padding: 0 20px 20px; }
   .note-card {
@@ -338,6 +455,35 @@
     font-size: 11px; font-weight: 500;
   }
   .note-card .ntr .nmore { font-size: 11px; color: var(--text-tertiary); font-weight: 500; align-self: center; }
+
+  /* Notes Filter */
+  .notes-filter {
+    display: flex;
+    gap: 8px;
+    padding: 0 20px 12px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .notes-filter::-webkit-scrollbar { display: none; }
+  .notes-filter-tag {
+    flex-shrink: 0;
+    padding: 8px 14px;
+    border-radius: 100px;
+    background: #F4F4F5;
+    font-size: 13px;
+    font-weight: 500;
+    color: #71717A;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .notes-filter-tag:hover {
+    background: #E8E8EA;
+  }
+  .notes-filter-tag.active {
+    background: #18181B;
+    color: #FFF;
+  }
 
   .empty-notes {
     text-align: center;
@@ -408,32 +554,10 @@
   }
   .img-card .img-placeholder .icon-big { color: var(--text-tertiary); display: inline-flex; }
   .img-card .img-placeholder .icon-big svg { width: 48px; height: 48px; opacity: 0.6; }
-  .img-card .img-overlay {
-    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(24,24,27,0.55);
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
-    backdrop-filter: blur(6px);
-  }
-  .img-card .img-overlay .spinner {
-    width: 22px; height: 22px;
-    border: 2px solid rgba(255,255,255,0.2);
-    border-top-color: #FFF;
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .img-card .img-overlay span { color: #FFF; font-size: 13px; font-weight: 400; letter-spacing: 0.5px; }
-  .img-card .img-overlay.failed { background: rgba(24,24,27,0.5); }
-  .img-card .img-overlay.failed .retry {
-    background: #FFF; color: var(--text-primary); border: none; padding: 8px 28px;
-    border-radius: 100px; font-weight: 500; font-size: 13px; cursor: pointer; font-family: inherit;
-    transition: all 0.2s;
-  }
-  .img-card .img-overlay.failed .retry:hover { background: #F0F0EE; }
   .img-card .body { padding: 18px; }
-  .img-card .toggle-ocr { color: var(--accent); font-size: 13px; cursor: pointer; display: inline-block; margin-bottom: 8px; font-weight: 500; transition: opacity 0.2s; }
-  .img-card .toggle-ocr:hover { opacity: 0.65; }
-  .img-card .ocr-text {
+  .toggle-ocr { color: var(--accent); font-size: 13px; cursor: pointer; display: inline-block; margin-bottom: 8px; font-weight: 500; transition: opacity 0.2s; }
+  .toggle-ocr:hover { opacity: 0.65; }
+  .ocr-text {
     font-size: 13px; color: var(--text-secondary); line-height: 1.7;
     background: #F4F4F5; padding: 14px; border-radius: var(--radius-sm);
     display: none; margin-bottom: 16px; font-family: "SF Mono", Monaco, "Cascadia Code", monospace;
@@ -445,37 +569,14 @@
     text-transform: uppercase; letter-spacing: 2px;
     margin-top: 14px; margin-bottom: 8px;
   }
-  .img-card .summary-text {
-    font-size: 15px; color: var(--text-primary); line-height: 1.65;
-    cursor: pointer; padding: 6px 8px; margin: 0 -8px; border-radius: 6px;
-    transition: background 0.15s;
-  }
-  .img-card .summary-text:hover { background: #F4F4F5; }
   .img-card .tags-row { display: flex; gap: 6px; flex-wrap: wrap; cursor: pointer; padding: 4px 6px; margin: 0 -6px; }
   .img-card .tag {
     background: #F4F4F5; padding: 5px 14px; border-radius: 100px;
     font-size: 12px; color: var(--accent); font-weight: 500;
   }
 
-  .bottom-gen {
-    padding: 14px 20px 24px;
-    border-top: 1px solid var(--border);
-    background: var(--bg);
-  }
-  .bottom-gen .btn-gen {
-    width: 100%;
-    background: var(--text-primary); color: #FFF; border: none;
-    border-radius: 100px; padding: 16px;
-    font-weight: 600; font-size: 15px; cursor: pointer; font-family: inherit;
-    transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
-    letter-spacing: 0.5px;
-  }
-  .bottom-gen .btn-gen:disabled { opacity: 0.25; cursor: not-allowed; }
-  .bottom-gen .btn-gen:not(:disabled):hover { background: var(--accent); transform: translateY(-1px); }
-  .bottom-gen .btn-gen:not(:disabled):active { transform: scale(0.98); }
-
   /* Note editor overlay */
-  .note-content { padding: 24px 0 48px; }
+  .note-content { padding: 12px 0 48px; }
   .note-content [contenteditable] { outline: none; cursor: text; border-radius: 6px; padding: 4px 8px; margin: 0 -8px; transition: background 0.15s; }
   .note-content [contenteditable]:focus { background: #F4F4F5; }
   .note-title-edit {
@@ -500,10 +601,24 @@
   .nd-card {
     background: var(--surface);
     border-radius: var(--radius-lg);
-    padding: 0;
+    padding: 20px 0 0;
     margin-bottom: 16px;
     overflow: hidden;
     border: 1px solid var(--border);
+  }
+  .nd-note-header {
+    padding: 20px 20px 0;
+  }
+  .nd-card .nd-title,
+  .nd-note-header .nd-title {
+    font-size: 20px; font-weight: 700; color: var(--text-primary);
+    padding: 14px 20px; margin: 0 0 16px;
+    background: #FFF; border-bottom: 1px solid var(--border);
+    outline: none; cursor: text; transition: background 0.15s; min-height: 44px;
+  }
+  .nd-card .nd-title:focus { background: #F4F4F5; }
+  .nd-card .nd-title:empty:before {
+    content: attr(data-placeholder); color: var(--text-quaternary);
   }
   .nd-card .nd-image {
     width: 100%; aspect-ratio: 4 / 3; background: #F4F4F5;
@@ -527,6 +642,11 @@
   .nd-card .nd-body {
     padding: 20px;
   }
+  .nd-card .nd-title {
+    font-size: 20px; font-weight: 700; color: var(--text-primary);
+    padding: 0 0 12px; margin-bottom: 12px;
+    outline: none; cursor: text; transition: background 0.15s; min-height: 40px;
+  }
   .nd-card .nd-text {
     font-size: 15px; color: var(--text-primary); line-height: 1.7;
     outline: none; cursor: text; border-radius: 6px; padding: 8px;
@@ -535,6 +655,18 @@
   .nd-card .nd-text:focus { background: #F4F4F5; }
   .nd-card .nd-text:empty:before {
     content: attr(data-placeholder); color: var(--text-quaternary);
+  }
+  .note-tags-block {
+    padding: 0 20px 20px;
+  }
+  .note-tags-label {
+    font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 10px;
+  }
+  .note-tags-block .nd-tags {
+    margin-top: 0;
+  }
+  .note-tags-block .nd-add-tag {
+    margin-top: 10px;
   }
   .nd-card .nd-divider {
     height: 1px; background: var(--border); margin: 16px 0;
@@ -626,48 +758,6 @@
   }
   .nd-dots.hidden { display: none; }
 
-  /* AI Generated note */
-  .ai-note {
-    padding: 20px; animation: fadeUp 0.4s ease;
-  }
-  .ai-note-date {
-    font-size: 11px; color: var(--text-tertiary);
-    letter-spacing: 2px; text-transform: uppercase;
-    margin-bottom: 6px;
-  }
-  .ai-note-title {
-    font-family: "Noto Serif SC", "Songti SC", Georgia, serif;
-    font-size: 24px; font-weight: 700; color: var(--text-primary);
-    line-height: 1.35; margin-bottom: 20px;
-  }
-  .ai-note-section { margin-bottom: 20px; }
-  .ai-note-section-title {
-    font-size: 16px; font-weight: 600; color: var(--text-primary);
-    margin-bottom: 8px; line-height: 1.4;
-  }
-  .ai-note-text {
-    font-size: 14px; color: var(--text-secondary); line-height: 1.7;
-    white-space: pre-wrap;
-  }
-  .ai-note-image-block {
-    margin-bottom: 16px; border-radius: var(--radius-sm);
-    overflow: hidden; border: 1px solid var(--border);
-  }
-  .ai-note-image-block img {
-    width: 100%; display: block;
-  }
-  .ai-note-caption {
-    padding: 10px 14px; font-size: 13px; color: var(--text-secondary);
-    background: var(--bg); line-height: 1.5;
-  }
-  .ai-note-tags {
-    display: flex; gap: 6px; flex-wrap: wrap; margin-top: 16px;
-  }
-  .ai-note-tag {
-    padding: 5px 14px; border-radius: 100px;
-    font-size: 12px; font-weight: 500;
-  }
-
   .note-tags-section { margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--border); }
   .note-tags-label { font-size: 11px; font-weight: 600; color: var(--text-tertiary); letter-spacing: 2px; text-transform: uppercase; cursor: pointer; margin-bottom: 10px; user-select: none; }
   .note-tags-label:hover { opacity: 0.6; }
@@ -702,6 +792,219 @@
     color: var(--text-tertiary); font-size: 15px;
   }
 
+  /* ===== NOTE DETAIL OVERLAY ===== */
+  #overlay-note {
+    background: #FAFAFA;
+  }
+  .note-detail-topbar {
+    display: flex;
+    align-items: center;
+    min-height: 44pt;
+    padding: 8px 16px;
+    background: #FAFAFA;
+    border-bottom: 1px solid #F0F0EE;
+    flex-shrink: 0;
+  }
+  .note-back-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 20px;
+    background: #FFF;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .note-back-btn:hover {
+    transform: scale(1.05);
+  }
+  .note-back-btn:active {
+    transform: scale(0.95);
+  }
+  .note-back-btn span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .note-back-btn span svg {
+    width: 20px;
+    height: 20px;
+    color: var(--text-primary);
+  }
+  .note-topbar-title {
+    flex: 1;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: center;
+    margin: 0 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .note-topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .note-save-btn {
+    background: #18181B;
+    color: #FFF;
+    border: none;
+    border-radius: 100px;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+  .note-save-btn:hover {
+    background: #27272A;
+  }
+  .note-save-btn:active {
+    transform: scale(0.95);
+  }
+  .note-share-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 18px;
+    background: #FFF;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    transition: all 0.2s;
+  }
+  .note-share-btn:hover {
+    background: #F4F4F5;
+  }
+  .note-share-btn span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .note-share-btn span svg {
+    width: 18px;
+    height: 18px;
+    color: var(--text-primary);
+  }
+
+  /* Note Content Styles */
+  .note-title {
+    font-family: "Noto Serif SC", "Songti SC", Georgia, serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.4;
+    margin-bottom: 20px;
+    outline: none;
+    cursor: text;
+    padding: 4px 0;
+  }
+  .note-title:empty:before {
+    content: attr(data-placeholder);
+    color: var(--text-quaternary);
+  }
+  .note-title:focus {
+    background: rgba(244,244,245,0.5);
+    border-radius: 6px;
+    padding: 4px 8px;
+    margin: -4px -8px 20px;
+  }
+  .note-section {
+    margin-bottom: 24px;
+  }
+  .note-section-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 10px;
+    outline: none;
+    cursor: text;
+    padding: 4px 0;
+  }
+  .note-section-title:empty:before {
+    content: attr(data-placeholder);
+    color: var(--text-quaternary);
+  }
+  .note-section-title:focus {
+    background: rgba(244,244,245,0.5);
+    border-radius: 6px;
+    padding: 4px 8px;
+    margin: -4px -8px 10px;
+  }
+  .note-section-content {
+    font-size: 16px;
+    color: var(--text-secondary);
+    line-height: 1.7;
+    outline: none;
+    cursor: text;
+    padding: 4px 0;
+  }
+  .note-section-content:empty:before {
+    content: attr(data-placeholder);
+    color: var(--text-quaternary);
+  }
+  .note-section-content:focus {
+    background: rgba(244,244,245,0.5);
+    border-radius: 6px;
+    padding: 4px 8px;
+    margin: -4px -8px 0;
+  }
+
+  /* Note Image Carousel */
+  .note-carousel {
+    margin-bottom: 24px;
+    overflow: hidden;
+    background: #F4F4F5;
+    border-radius: 12px;
+  }
+  .note-carousel-track {
+    display: flex;
+    transition: transform 0.3s ease;
+  }
+  .note-carousel-slide {
+    min-width: 100%;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+  }
+  .note-carousel-slide img {
+    max-width: 100%;
+    max-height: 300px;
+    object-fit: contain;
+    display: block;
+  }
+  .note-carousel-dots {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 0;
+  }
+  .note-carousel-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 3px;
+    background: #D4D4D8;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  .note-carousel-dot.active {
+    width: 18px;
+    background: #18181B;
+  }
+
   /* ===== ANIMATIONS ===== */
   .fade-in { animation: fadeUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
   @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
@@ -724,30 +1027,23 @@
     <div class="page active" id="page-home">
       <div class="home-scroll">
         <div class="hero">
-          <div class="badge fade-in" style="animation-delay:0.05s">AI POWERED</div>
           <h1 class="fade-in" style="animation-delay:0.1s">闪记</h1>
-          <p class="fade-in" style="animation-delay:0.15s">导入截图，AI 自动生成结构化笔记</p>
+          <p class="fade-in" style="animation-delay:0.15s">导入截图，自动识别提取文本</p>
         </div>
 
         <!-- Static Card Carousel -->
-        <div class="carousel-section">
+        <div class="carousel-section" id="carouselSection">
           <div class="carousel-stack" id="carouselStack"></div>
         </div>
 
         <div class="import-section">
-          <button class="import-btn-slim" onclick="handleImportClick()">
+          <button class="import-btn-slim" onclick="handleImportClick()" id="importBtn">
             <span data-icon="camera"></span>
             从相册导入截图
           </button>
         </div>
 
-        <div class="section-label">学习项目</div>
-
-        <div class="create-row">
-          <input type="text" id="projectInput" placeholder="新建项目，输入标题..." value="">
-          <button class="btn-plus" onclick="createProject()" data-icon="plus" style="display:inline-flex;align-items:center;justify-content:center"></button>
-        </div>
-
+        <div class="section-label">最近访问</div>
         <div class="project-list" id="projectList"></div>
       </div>
     </div>
@@ -755,9 +1051,15 @@
     <!-- ===== TAB 2: NOTES ===== -->
     <div class="page" id="page-notes">
       <div class="notes-header">
-        <h2>全部笔记</h2>
-        <span class="nc" id="noteCount">0 篇</span>
+        <div class="notes-header-left">
+          <h2>全部笔记</h2>
+          <span class="nc" id="noteCount">0 篇</span>
+        </div>
+        <button class="note-add-btn" onclick="handleAddNote()">
+          <svg width="20" height="20" viewBox="0 0 48 48" fill="none"><path d="M24 8V40" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><path d="M8 24H40" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
+        </button>
       </div>
+      <div class="notes-filter" id="notesFilter"></div>
       <div class="notes-list" id="notesList"></div>
     </div>
   </div>
@@ -782,17 +1084,21 @@
       <button class="o-action" onclick="triggerFilePicker()">从相册导入</button>
     </div>
     <div class="overlay-scroll" id="projectImagesList"></div>
-    <div class="bottom-gen">
-      <button class="btn-gen" id="genBtn" disabled onclick="openNoteDetail()">请先导入图片</button>
-    </div>
   </div>
 
   <!-- ===== OVERLAY: Note Detail ===== -->
   <div class="overlay" id="overlay-note">
-    <div class="overlay-topbar">
-      <button class="back" onclick="closeOverlay('overlay-note')"><span data-icon="arrowLeft" style="margin-right:4px"></span>返回</button>
-      <span class="o-title"></span>
-      <button class="o-action" onclick="generateSummary()" id="noteActionBtn">AI总结笔记</button>
+    <div class="note-detail-topbar">
+      <button class="note-back-btn" onclick="closeOverlay('overlay-note')">
+        <span data-icon="arrowLeft"></span>
+      </button>
+      <div class="note-topbar-title" id="noteTopbarTitle">笔记标题</div>
+      <div class="note-topbar-actions">
+        <button class="note-save-btn" onclick="alert('笔记已保存')">保存</button>
+        <button class="note-share-btn" onclick="alert('分享功能开发中...')">
+          <span data-icon="share"></span>
+        </button>
+      </div>
     </div>
     <div class="overlay-scroll">
       <div class="note-content" id="noteEditor"></div>
@@ -817,7 +1123,7 @@
     </div>
   </div>
 
-  <input type="file" id="fileInput" accept="image/*" multiple style="display:none" />
+  <input type="file" id="fileInput" accept="image/*" multiple style="display:none" onchange="handleFilePick(event)" />
 </div>
 
 <script>
@@ -838,6 +1144,15 @@ const icons = {
   puzzle: '<svg class="icon-svg" width="22" height="22" viewBox="0 0 48 48" fill="none"><path d="M33 4V12H37C39.2 12 41 13.8 41 16V20H33V26H41V32C41 34.2 39.2 36 37 36H33V44H15V36H11C8.8 36 7 34.2 7 32V26H15V20H7V16C7 13.8 8.8 12 11 12H15V4H33Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/></svg>',
   link: '<svg class="icon-svg" width="22" height="22" viewBox="0 0 48 48" fill="none"><path d="M26 24C26 20.7 24 14 18 14C12 14 8 18 8 24C8 30 12 34 18 34C20 34 22 33.5 24 32" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 24C22 27.3 24 34 30 34C36 34 40 30 40 24C40 18 36 14 30 14C28 14 26 14.5 24 16" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   book: '<svg class="icon-svg" width="22" height="22" viewBox="0 0 48 48" fill="none"><path d="M24 12C24 8 20 4 14 4H6V38H16C20 38 24 40 24 44V12Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M24 12C24 8 28 4 34 4H42V38H32C28 38 24 40 24 44V12Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/></svg>',
+  more: '<svg class="icon-svg" width="20" height="20" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="10" r="4" fill="currentColor"/><circle cx="24" cy="24" r="4" fill="currentColor"/><circle cx="24" cy="38" r="4" fill="currentColor"/></svg>',
+  search: '<svg class="icon-svg" width="20" height="20" viewBox="0 0 48 48" fill="none"><circle cx="22" cy="22" r="14" stroke="currentColor" stroke-width="4"/><path d="M32 32L42 42" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>',
+  checkSquare: '<svg class="icon-svg" width="20" height="20" viewBox="0 0 48 48" fill="none"><rect x="6" y="6" width="36" height="36" rx="4" stroke="currentColor" stroke-width="4"/><path d="M14 24L22 32L36 16" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  check: '<svg class="icon-svg" width="14" height="14" viewBox="0 0 48 48" fill="none"><path d="M12 24L20 32L36 14" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  share: '<svg class="icon-svg" width="18" height="18" viewBox="0 0 48 48" fill="none"><circle cx="36" cy="12" r="6" stroke="currentColor" stroke-width="4"/><circle cx="12" cy="24" r="6" stroke="currentColor" stroke-width="4"/><circle cx="36" cy="36" r="6" stroke="currentColor" stroke-width="4"/><path d="M17 21L31 15" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><path d="M17 27L31 33" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>',
+  undo: '<svg class="icon-svg" width="20" height="20" viewBox="0 0 48 48" fill="none"><path d="M8 22H30C36.627 22 42 27.373 42 34C42 40.627 36.627 46 30 46H24" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><path d="M16 14L8 22L16 30" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  redo: '<svg class="icon-svg" width="20" height="20" viewBox="0 0 48 48" fill="none"><path d="M40 22H18C11.373 22 6 27.373 6 34C6 40.627 11.373 46 18 46H24" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><path d="M32 14L40 22L32 30" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  image: '<svg class="icon-svg" width="20" height="20" viewBox="0 0 48 48" fill="none"><rect x="6" y="6" width="36" height="36" rx="4" stroke="currentColor" stroke-width="4"/><circle cx="16" cy="16" r="4" stroke="currentColor" stroke-width="4"/><path d="M6 34L16 24L24 32L32 22L42 34" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  list: '<svg class="icon-svg" width="20" height="20" viewBox="0 0 48 48" fill="none"><path d="M14 12H42" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><path d="M14 24H42" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><path d="M14 36H42" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><circle cx="6" cy="12" r="2" fill="currentColor"/><circle cx="6" cy="24" r="2" fill="currentColor"/><circle cx="6" cy="36" r="2" fill="currentColor"/></svg>',
 };
 
 // ===================== DATA =====================
@@ -846,6 +1161,7 @@ let projectImages = {};
 let allNotes = [];
 let currentProjectId = null;
 let imageIdCounter = 1;
+let selectedNoteTag = null;
 
 const mockImageData = [
   { icon: 'ruler', ocr: '导数公式: d/dx[x^n] = nx^(n-1)\n三角函数: sin²x + cos²x = 1\n重要极限: lim(x→0) sinx/x = 1', summary: '微积分基本公式和三角函数恒等式是高等数学的基础工具。', tags: ['公式', '概念'] },
@@ -994,6 +1310,7 @@ function tagColor(tag) {
     return {
       id: i + 1,
       projectId: n.pid,
+      title: n.title,
       projectTitle: proj ? proj.title : '',
       content: '',
       tags: JSON.stringify(Array.from(tagSet)),
@@ -1009,9 +1326,9 @@ function tagColor(tag) {
   currentProjectId = 1001;
   renderProjects();
   startCarousel();
+  renderNotesFilter();
   renderNotes();
   updateNoteCount();
-  document.getElementById('fileInput').addEventListener('change', handleFilePick);
 })();
 
 // ===================== TAB SWITCHING =====================
@@ -1031,7 +1348,7 @@ function switchTab(index) {
 function renderProjects() {
   const list = document.getElementById('projectList');
   if (projects.length === 0) {
-    list.innerHTML = `<div class="empty-projects"><div class="ep-icon">${icons.write}</div><div class="ep-t">还没有学习项目</div><div class="ep-h">输入标题创建一个吧</div></div>`;
+    list.innerHTML = `<div class="empty-projects"><div class="ep-icon">${icons.write}</div><div class="ep-t">还没有学习项目</div><div class="ep-h">当前暂无学习项目</div></div>`;
     return;
   }
   list.innerHTML = projects.map((p, i) => `
@@ -1046,29 +1363,35 @@ function renderProjects() {
   `).join('');
 }
 
-function createProject() {
-  const input = document.getElementById('projectInput');
-  const title = input.value.trim();
-  if (!title) return;
-  const project = { id: Date.now(), title, createdAt: new Date().toISOString() };
-  projects.push(project);
-  projectImages[project.id] = [];
-  input.value = '';
-  renderProjects();
-  // Auto-navigate to the new project
-  openProject(project.id);
-}
-
-function handleImportClick() {
-  const project = { id: Date.now(), title: '新项目', createdAt: new Date().toISOString() };
-  projects.push(project);
-  projectImages[project.id] = [];
-  currentProjectId = project.id;
-  renderProjects();
+function handleAddNote() {
+  const id = Date.now();
+  const note = {
+    id, projectId: id,
+    title: '新笔记',
+    projectTitle: '新笔记',
+    content: '', tags: '[]',
+    imageCount: 0, imageUrls: [], imageNotes: [], imageTags: [],
+    notesText: '', updatedAt: new Date().toISOString(),
+  };
+  currentProjectId = id;
+  allNotes.unshift(note);
+  renderNotes();
+  updateNoteCount();
   triggerFilePicker();
 }
 
-// ===================== PROJECT DETAIL =====================
+function handleImportClick() {
+  triggerFilePicker();
+}
+
+function closeOverlay(id) {
+  document.getElementById(id).classList.remove('open');
+  if (id === 'overlay-note') {
+    renderNotes();
+    updateNoteCount();
+  }
+}
+
 function openProject(id) {
   currentProjectId = id;
   const project = projects.find(p => p.id === id);
@@ -1078,181 +1401,112 @@ function openProject(id) {
   document.getElementById('overlay-project').classList.add('open');
 }
 
-function closeOverlay(id) {
-  document.getElementById(id).classList.remove('open');
-  if (id === 'overlay-note') {
-    const btn = document.querySelector('#overlay-note .o-action');
-    btn.textContent = 'AI总结笔记';
-    btn.disabled = false;
-    btn.style.opacity = '1';
-    btn.style.display = '';
-  }
-  renderNotes();
-  updateNoteCount();
-}
-
 function renderProjectImages() {
   const list = document.getElementById('projectImagesList');
   const images = projectImages[currentProjectId] || [];
-
   if (images.length === 0) {
     list.innerHTML = `<div class="empty-projects" style="margin-top:60px"><div class="ep-icon">${icons.camera}</div><div class="ep-t">暂无图片</div><div class="ep-h">点击顶部按钮从相册导入截图</div></div>`;
   } else {
     list.innerHTML = images.map((img, i) => getImageCardHTML(img, i)).join('');
   }
-  updateGenBtn();
+}
+
+function toggleOcr(el) {
+  const ocrText = el.nextElementSibling;
+  if (ocrText) ocrText.classList.toggle('open');
+  el.textContent = ocrText && ocrText.classList.contains('open') ? '收起原文' : '展开原文';
 }
 
 function getImageCardHTML(img, index) {
-  const isProcessing = img.status === 'processing';
-  const isFailed = img.status === 'failed';
-  const isDone = img.status === 'done';
-
   const imgSrc = img.fileDataUrl || img.imgSrc || PLACEHOLDER_IMAGES[index % PLACEHOLDER_IMAGES.length];
-  return `
-    <div class="img-card fade-in" style="animation-delay:${index*0.08}s">
-      <div class="img-placeholder" style="${imgSrc ? 'padding:0;overflow:hidden' : ''}">
-        ${imgSrc ? `<img src="${imgSrc}" style="width:100%;height:100%;object-fit:cover;display:block" />` : `<span class="icon-big">${icons[img.icon] || icons.notes}</span>`}
-        ${isProcessing ? '<div class="img-overlay"><div class="spinner"></div><span>分析中...</span></div>' : ''}
-        ${isFailed ? '<div class="img-overlay failed"><span>分析失败</span><button class="retry" onclick="retryImg('+img.id+')">重试</button></div>' : ''}
-      </div>
-      ${isDone ? `
-        <div class="body">
-          <span class="toggle-ocr" onclick="toggleOcr(this)">展开原文</span>
-          <div class="ocr-text">${img.ocr}</div>
-          <div class="label">AI 要点</div>
-          <div class="summary-text" onclick="editSummary(this,${img.id})">${img.summary}</div>
-          <div class="label">标签</div>
-          <div class="tags-row" onclick="editTags(this,${img.id})">
-            ${JSON.parse(img.tags).map(t => '<span class="tag">'+t+'</span>').join('')}
-          </div>
-        </div>` : ''}
-    </div>`;
-}
-
-function updateGenBtn() {
-  const btn = document.getElementById('genBtn');
-  const images = projectImages[currentProjectId] || [];
-  if (images.length === 0) { btn.textContent = '请先导入图片'; btn.disabled = true; }
-  else if (images.some(i => i.status === 'processing')) { btn.textContent = '等待分析完成...'; btn.disabled = true; }
-  else if (images.some(i => i.status === 'failed')) { btn.textContent = '有图片分析失败，请重试'; btn.disabled = true; }
-  else { btn.textContent = '生成项目总结'; btn.disabled = false; }
-}
-
-function simulateImport() {
-  const images = projectImages[currentProjectId];
-  if (!images || images.length >= 8) return;
-  const data = currentProjectId === 1001 ? mockImageData
-    : currentProjectId === 1002
-    ? [{ icon:'code', ocr:'', summary:'Python 变量、函数定义', tags:['代码'] },
-       { icon:'notes', ocr:'', summary:'列表和字典数据结构', tags:['代码'] },
-       { icon:'puzzle', ocr:'', summary:'类与继承 OOP', tags:['代码'] }]
-    : [{ icon:'link', ocr:'', summary:'链表结构', tags:['概念'] },
-       { icon:'book', ocr:'', summary:'栈与队列', tags:['概念'] }];
-
-  data.forEach((d, i) => {
-    images.push({
-      id: imageIdCounter++, status: i === 1 ? 'processing' : 'done',
-      icon: d.icon, ocr: d.ocr || d.summary,
-      summary: d.summary, tags: JSON.stringify(d.tags),
-      imgSrc: PLACEHOLDER_IMAGES[(images.length + i) % PLACEHOLDER_IMAGES.length],
-    });
-  });
-  renderProjectImages();
-
-  const procImgs = images.filter(i => i.status === 'processing');
-  procImgs.forEach((img, idx) => {
-    setTimeout(() => { img.status = 'done'; renderProjectImages(); }, 2000 + idx * 500);
-  });
+  const imgContent = imgSrc
+    ? '<img src="' + imgSrc + '" style="width:100%;height:100%;object-fit:cover;display:block" />'
+    : '<span class="icon-big">' + (icons[img.icon] || icons.notes) + '</span>';
+  return '<div class="img-card fade-in" style="animation-delay:' + (index*0.08) + 's">'
+    + '<div class="img-placeholder" style="' + (imgSrc ? 'padding:0;overflow:hidden' : '') + '">' + imgContent + '</div>'
+    + '<div class="body">'
+    + '<span class="toggle-ocr" onclick="toggleOcr(this)">展开原文</span>'
+    + '<div class="ocr-text">' + img.ocr + '</div>'
+    + '<div class="label">标签</div>'
+    + '<div class="tags-row" onclick="editTags(this,' + img.id + ')">'
+    + JSON.parse(img.tags).map(function(t){ return '<span class="tag">'+t+'</span>'; }).join('')
+    + '</div></div></div>';
 }
 
 function triggerFilePicker() {
   document.getElementById('fileInput').click();
 }
 
+// ===================== HOME PAGE IMPORT → NOTE DETAIL OCR =====================
+
 function handleFilePick(event) {
   const files = event.target.files;
   if (!files || files.length === 0) return;
-  if (!projectImages[currentProjectId]) projectImages[currentProjectId] = [];
 
-  const images = projectImages[currentProjectId];
-  let processed = 0;
-  const total = files.length;
-  const newImages = [];
+  const imageEntries = [];
+  let loaded = 0;
 
   Array.from(files).forEach((file, i) => {
     const reader = new FileReader();
     reader.onload = function(e) {
-      const imgEntry = {
-        id: imageIdCounter++,
-        status: 'done',
-        icon: 'notes',
+      imageEntries.push({
+        index: i,
         fileDataUrl: e.target.result,
-        imgSrc: PLACEHOLDER_IMAGES[i % PLACEHOLDER_IMAGES.length],
         ocr: '',
-        summary: '已导入截图',
-        tags: JSON.stringify(['截图']),
-      };
-      images.push(imgEntry);
-      newImages.push(imgEntry);
-      processed++;
-
-      if (processed === total) {
-        const note = {
-          id: allNotes.length + 1,
-          projectId: currentProjectId,
-          projectTitle: projects.find(p => p.id === currentProjectId)?.title || '新项目',
-          content: '',
-          tags: JSON.stringify(['截图']),
-          imageCount: newImages.length,
-          imageUrls: newImages.map(img => img.fileDataUrl || img.imgSrc || '').filter(Boolean),
-          imageNotes: newImages.map(() => ''),
-          imageTags: newImages.map(() => []),
-          notesText: '',
-          updatedAt: new Date().toISOString(),
-        };
-        const existingIdx = allNotes.findIndex(n => n.projectId === currentProjectId);
-        if (existingIdx >= 0) {
-          allNotes[existingIdx] = note;
-        } else {
-          allNotes.push(note);
-        }
-        renderNotes();
-        updateNoteCount();
-        openNoteDetail(currentProjectId);
+      });
+      loaded++;
+      if (loaded === files.length) {
+        imageEntries.sort((a, b) => a.index - b.index);
+        createNoteAndOpenDetail(imageEntries);
       }
     };
     reader.readAsDataURL(file);
   });
-
-  event.target.value = '';
 }
 
-function retryImg(id) {
-  const images = projectImages[currentProjectId] || [];
-  const img = images.find(i => i.id === id);
-  if (img) { img.status = 'processing'; renderProjectImages();
-    setTimeout(() => { img.status = 'done'; renderProjectImages(); }, 1500); }
-}
-
-function toggleOcr(el) {
-  const text = el.nextElementSibling;
-  text.classList.toggle('open');
-  el.textContent = text.classList.contains('open') ? '收起原文' : '展开原文';
-}
-
-function editSummary(el, id) {
-  const val = el.textContent;
-  const input = document.createElement('input');
-  input.type = 'text'; input.value = val;
-  input.style.cssText = 'border:1.5px solid #18181B;border-radius:8px;padding:10px;font-size:14px;width:100%;font-family:inherit;outline:none;background:#FFF';
-  el.replaceWith(input); input.focus();
-  input.onblur = function() {
-    const div = document.createElement('div');
-    div.className = 'summary-text'; div.textContent = this.value || val;
-    div.onclick = function() { editSummary(this, id); };
-    this.replaceWith(div);
+function createNoteAndOpenDetail(imageEntries) {
+  const id = Date.now();
+  const note = {
+    id, projectId: id,
+    title: '新笔记',
+    projectTitle: '新笔记',
+    content: '', tags: '[]',
+    imageCount: imageEntries.length,
+    imageUrls: imageEntries.map(img => img.fileDataUrl),
+    imageOcrTexts: imageEntries.map(img => img.ocr),
+    imageNotes: imageEntries.map(() => ''),
+    imageTags: imageEntries.map(() => []),
+    notesText: '',
+    updatedAt: new Date().toISOString(),
   };
+  currentProjectId = id;
+  allNotes.unshift(note);
+  renderNotes();
+  updateNoteCount();
+  renderProjects();
+  openNoteDetail(id, true);
+}
+
+function saveImageTitle(index, text) {
+  const note = allNotes.find(n => n.projectId === currentProjectId);
+  if (!note) return;
+  note.imageTitles = note.imageTitles || [];
+  note.imageTitles[index] = text.trim();
+}
+
+function saveNoteTitle(text) {
+  const note = allNotes.find(n => n.projectId === currentProjectId);
+  if (!note) return;
+  note.title = text.trim();
+}
+
+function addNoteTag() {
+  addTagTargetIndex = -1;
+  const overlay = document.getElementById('tagInputOverlay');
+  const input = document.getElementById('tagInputField');
+  overlay.style.display = 'flex';
+  input.value = '';
+  setTimeout(() => input.focus(), 100);
 }
 
 function editTags(el, id) {
@@ -1270,13 +1524,62 @@ function editTags(el, id) {
   };
 }
 
-function renderNotes() {
-  const list = document.getElementById('notesList');
-  if (allNotes.length === 0) {
-    list.innerHTML = `<div class="empty-notes"><div class="en-icon">${icons.write}</div><div class="en-t">还没有笔记</div><div class="en-h">导入截图并生成总结后，笔记会出现在这里</div></div>`;
+// ===================== NOTES FILTER =====================
+
+function getAllNoteTags() {
+  const tagSet = new Set();
+  allNotes.forEach(note => {
+    try {
+      const tags = JSON.parse(note.tags || '[]');
+      tags.forEach(t => tagSet.add(t));
+    } catch {}
+  });
+  return Array.from(tagSet);
+}
+
+function renderNotesFilter() {
+  const filterContainer = document.getElementById('notesFilter');
+  const allTags = getAllNoteTags();
+  
+  if (allTags.length === 0) {
+    filterContainer.innerHTML = '';
     return;
   }
-  list.innerHTML = allNotes.map((n, i) => {
+  
+  let html = `<div class="notes-filter-tag ${!selectedNoteTag ? 'active' : ''}" onclick="filterNotesByTag(null)">全部</div>`;
+  allTags.forEach(tag => {
+    html += `<div class="notes-filter-tag ${selectedNoteTag === tag ? 'active' : ''}" onclick="filterNotesByTag('${tag}')">${tag}</div>`;
+  });
+  filterContainer.innerHTML = html;
+}
+
+function filterNotesByTag(tag) {
+  selectedNoteTag = tag;
+  renderNotesFilter();
+  renderNotes();
+  updateNoteCount();
+}
+
+function renderNotes() {
+  const list = document.getElementById('notesList');
+  
+  let filteredNotes = allNotes;
+  if (selectedNoteTag) {
+    filteredNotes = allNotes.filter(n => {
+      try {
+        const tags = JSON.parse(n.tags || '[]');
+        return tags.includes(selectedNoteTag);
+      } catch {
+        return false;
+      }
+    });
+  }
+  
+  if (filteredNotes.length === 0) {
+    list.innerHTML = `<div class="empty-notes"><div class="en-icon">${icons.write}</div><div class="en-t">还没有笔记</div><div class="en-h">导入截图后，笔记会出现在这里</div></div>`;
+    return;
+  }
+  list.innerHTML = filteredNotes.map((n, i) => {
     const tagList = (() => { try { return JSON.parse(n.tags); } catch { return []; } })();
     const imgs = (n.imageUrls || []).slice(0, 3);
     const imgCount = n.imageCount;
@@ -1299,7 +1602,7 @@ function renderNotes() {
     <div class="note-card fade-in" style="animation-delay:${i*0.06}s" onclick="openNoteDetail(${n.projectId})">
       <div class="nimg-stack">${stackHtml}</div>
       <div class="ntxt">
-        <div class="nct">${n.projectTitle || '无标题'}</div>
+        <div class="nct">${n.title || n.projectTitle || '无标题'}</div>
         <div class="nce">${plainText.substring(0, 140) || '暂无内容'}</div>
         <div class="nmeta">
           <span class="nmi">${icons.camera} ${imgCount} 张截图</span>
@@ -1313,100 +1616,198 @@ function renderNotes() {
 }
 
 function updateNoteCount() {
-  document.getElementById('noteCount').textContent = `${allNotes.length} 篇`;
+  const count = selectedNoteTag 
+    ? allNotes.filter(n => {
+        try {
+          const tags = JSON.parse(n.tags || '[]');
+          return tags.includes(selectedNoteTag);
+        } catch {
+          return false;
+        }
+      }).length
+    : allNotes.length;
+  document.getElementById('noteCount').textContent = `${count} 篇`;
 }
 
 // ===================== NOTE DETAIL =====================
 let currentImageIndex = 0;
 
-function openNoteDetail(projectId) {
+function openNoteDetail(projectId, isNewImport) {
   currentProjectId = projectId;
   currentImageIndex = 0;
   const note = allNotes.find(n => n.projectId === projectId);
 
   const editor = document.getElementById('noteEditor');
+  const topbarTitle = document.getElementById('noteTopbarTitle');
+  
   if (note) {
+    const noteTitle = note.title || note.projectTitle || '新笔记';
+    topbarTitle.textContent = noteTitle;
+    
     const imgUrls = note.imageUrls || [];
-    const tagList = (() => { try { return JSON.parse(note.tags); } catch { return []; } })();
-    const project = projects.find(p => p.id === projectId);
     let html = '';
 
-    // Render each image card
-    imgUrls.forEach((url, i) => {
-      const cardTags = note.imageTags && note.imageTags[i] ? note.imageTags[i] : [];
-      html += `<div class="nd-card" data-index="${i}" style="${i > 0 ? 'display:none' : ''}">
-        <div class="nd-image" onclick="clickImage(event, ${i})"><img src="${url}" />
-          <div class="nd-nav-left" onclick="event.stopPropagation();showImage(${i-1})"><svg width="20" height="20" viewBox="0 0 48 48" fill="none"><path d="M30 14L18 24L30 34" stroke="#FFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-          <div class="nd-nav-right" onclick="event.stopPropagation();showImage(${i+1})"><svg width="20" height="20" viewBox="0 0 48 48" fill="none"><path d="M18 14L30 24L18 34" stroke="#FFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        </div>
-        <div class="nd-body">
-          <div class="nd-text" contenteditable="true" data-placeholder="在此输入文字...">${note.imageNotes && note.imageNotes[i] ? note.imageNotes[i] : ''}</div>
-          <div class="nd-divider"></div>
-          <div class="nd-meta">
-            <div class="nd-author">${project ? project.title : '项目'}</div>
-            <div class="nd-location">${new Date(note.updatedAt).toLocaleDateString('zh-CN')}</div>
-          </div>
-          <div class="nd-tags" data-img="${i}">
-            ${cardTags.map(t => {
-              const c = tagColor(t);
-              return `<span class="nd-tag" style="background:${c.bg};color:${c.text}">${t}</span>`;
-            }).join('')}
-            <span class="nd-add-tag" onclick="addImageTag(${i})">+ 标签</span>
-          </div>
-        </div>
-      </div>`;
-    });
+    // Title (editable)
+    html += `<div class="note-title" contenteditable="true" data-placeholder="输入标题..." onblur="saveNoteTitle(this.textContent)">${noteTitle}</div>`;
 
-    // Carousel dots (only if multiple images)
-    if (imgUrls.length > 1) {
-      html += `<div class="nd-dots" id="ndDots">
-        ${imgUrls.map((_, i) => `<div class="nd-dot${i === 0 ? ' active' : ''}" onclick="showImage(${i})"></div>`).join('')}
-      </div>`;
+    // Image list with OCR processing
+    if (imgUrls.length > 0) {
+      const ocrTexts = note.imageOcrTexts || [];
+      imgUrls.forEach((url, i) => {
+        html += `<div class="note-img-block" id="noteImgBlock${i}">`;
+        html += `<div class="note-img-thumb" onclick="previewNoteImage('${url}')"><img src="${url}" /></div>`;
+        if (isNewImport) {
+          html += `<div class="note-img-ocr-status" id="noteOcrStatus${i}">`;
+          html += `<div class="ocr-spinner-sm"></div><span>识别中...</span>`;
+          html += `</div>`;
+          html += `<div class="note-img-ocr-result" id="noteOcrResult${i}" style="display:none">`;
+          html += `<div class="ocr-result-toggle" onclick="toggleNoteOcr(${i})">识别结果 ▾</div>`;
+          html += `<div class="ocr-result-text" id="noteOcrText${i}">${ocrTexts[i] || ''}</div>`;
+          html += `</div>`;
+        } else {
+          const ocrText = ocrTexts[i] || '';
+          if (ocrText) {
+            html += `<div class="note-img-ocr-result">`;
+            html += `<div class="ocr-result-toggle" onclick="toggleNoteOcr(${i})">识别结果 ▾</div>`;
+            html += `<div class="ocr-result-text" id="noteOcrText${i}">${ocrText}</div>`;
+            html += `</div>`;
+          }
+        }
+        html += `</div>`;
+      });
     }
+
+    // Content sections
+    html += `
+      <div class="note-section">
+        <div class="note-section-title" contenteditable="true" data-placeholder="输入副标题...">Research & Analysis</div>
+        <div class="note-section-content" contenteditable="true" data-placeholder="输入内容...">Explore product data to gain a deeper understanding of the users.</div>
+      </div>
+    `;
+
+    html += `
+      <div class="note-section">
+        <div class="note-section-title" contenteditable="true" data-placeholder="输入副标题...">User Testing & Feedback</div>
+        <div class="note-section-content" contenteditable="true" data-placeholder="输入内容...">Gather and analyze feedback to refine the design further.</div>
+      </div>
+    `;
 
     editor.innerHTML = html;
-
-    // Auto-show carousel if multiple images
-    if (imgUrls.length > 1) {
-      setupCarouselDrag();
+    initIcons();
+    
+    // Simulate OCR completion for new imports using Tesseract.js
+    if (isNewImport) {
+      imgUrls.forEach((url, i) => {
+        runTesseractOcr(url, i);
+      });
     }
   } else {
-    editor.innerHTML = '<div class="note-para" style="color:#AAA;text-align:center;margin-top:40px">暂无笔记内容</div>';
+    topbarTitle.textContent = '新笔记';
+    editor.innerHTML = '<div class="note-empty" style="color:#AAA;text-align:center;margin-top:60px">点击工具栏开始编辑</div>';
   }
 
   document.getElementById('overlay-note').classList.add('open');
-
-  // Reset button
-  const btn = document.querySelector('#overlay-note .o-action');
-  btn.textContent = 'AI总结笔记';
-  btn.style.display = '';
-  btn.disabled = false;
-  btn.style.opacity = '1';
 }
 
-function setupCarouselDrag() {
-  const overlay = document.getElementById('overlay-note');
-  const editor = document.getElementById('noteEditor');
-  const note = allNotes.find(n => n.projectId === currentProjectId);
-  if (!note || !note.imageUrls || note.imageUrls.length <= 1) return;
+function toggleNoteOcr(index) {
+  const el = document.getElementById('noteOcrText' + index);
+  if (el) el.classList.toggle('open');
+}
 
+function runTesseractOcr(imageUrl, index) {
+  const statusEl = document.getElementById('noteOcrStatus' + index);
+  const resultEl = document.getElementById('noteOcrResult' + index);
+  const textEl = document.getElementById('noteOcrText' + index);
+  if (!statusEl || !resultEl || !textEl) return;
+
+  var worker = null;
+  var done = false;
+
+  setTimeout(function() {
+    if (!done) {
+      done = true;
+      try { if (worker) worker.terminate(); } catch(e) {}
+      textEl.textContent = '（识别超时，请重试）';
+      statusEl.style.display = 'none';
+      resultEl.style.display = 'block';
+    }
+  }, 30000);
+
+  Tesseract.recognize(imageUrl, 'eng', {
+    logger: function(m) {
+      if (!done && m.status === 'recognizing text' && statusEl) {
+        var pct = Math.round(m.progress * 100);
+        statusEl.innerHTML = '<div class="ocr-spinner-sm"></div><span>识别中... ' + pct + '%</span>';
+      }
+      if (!done && m.status === 'loading language traineddata' && statusEl) {
+        statusEl.innerHTML = '<div class="ocr-spinner-sm"></div><span>加载语言模型...</span>';
+      }
+    }
+  }).then(function(result) {
+    if (done) return;
+    done = true;
+    var text = result.data.text.trim();
+    textEl.textContent = text || '（未识别到文字）';
+    statusEl.style.display = 'none';
+    resultEl.style.display = 'block';
+  }).catch(function(err) {
+    if (done) return;
+    done = true;
+    textEl.textContent = '（识别失败: ' + (err.message || err) + '）';
+    statusEl.style.display = 'none';
+    resultEl.style.display = 'block';
+  });
+}
+
+function noteCarouselGoTo(index) {
+  const track = document.getElementById('noteCarouselTrack');
+  if (!track) return;
+  
+  const slides = track.children;
+  const total = slides.length;
+  const newIndex = ((index % total) + total) % total;
+  currentImageIndex = newIndex;
+  
+  track.style.transform = `translateX(-${newIndex * 100}%)`;
+  
+  document.querySelectorAll('.note-carousel-dot').forEach((dot, i) => {
+    dot.classList.toggle('active', i === newIndex);
+  });
+}
+
+function setupNoteCarouselDrag() {
+  const track = document.getElementById('noteCarouselTrack');
+  if (!track) return;
+  
   let startX = 0;
   let isDragging = false;
 
-  editor.addEventListener('touchstart', (e) => {
+  track.addEventListener('touchstart', (e) => {
     startX = e.touches[0].clientX;
     isDragging = true;
   }, { passive: true });
 
-  editor.addEventListener('touchend', (e) => {
+  track.addEventListener('touchend', (e) => {
     if (!isDragging) return;
     isDragging = false;
     const diff = startX - e.changedTouches[0].clientX;
     if (Math.abs(diff) > 50) {
-      if (diff > 0) showImage(currentImageIndex + 1);
-      else showImage(currentImageIndex - 1);
+      if (diff > 0) noteCarouselGoTo(currentImageIndex + 1);
+      else noteCarouselGoTo(currentImageIndex - 1);
     }
   }, { passive: true });
+}
+
+function saveNoteTitle(text) {
+  const note = allNotes.find(n => n.projectId === currentProjectId);
+  if (note) {
+    note.title = text.trim();
+    document.getElementById('noteTopbarTitle').textContent = text.trim() || '笔记';
+  }
+}
+
+function previewNoteImage(url) {
+  document.getElementById('viewer').classList.add('open');
 }
 
 function showImage(index) {
@@ -1456,21 +1857,36 @@ function confirmTagInput() {
 
   const note = allNotes.find(n => n.projectId === currentProjectId);
   if (!note) return;
-  if (!note.imageTags) note.imageTags = [];
-  if (!note.imageTags[addTagTargetIndex]) note.imageTags[addTagTargetIndex] = [];
+  if (addTagTargetIndex >= 0) {
+    if (!note.imageTags) note.imageTags = [];
+    if (!note.imageTags[addTagTargetIndex]) note.imageTags[addTagTargetIndex] = [];
+    note.imageTags[addTagTargetIndex].push(tag);
 
-  note.imageTags[addTagTargetIndex].push(tag);
+    // Re-render that card's tags
+    const tagsContainer = document.querySelector(`.nd-tags[data-img="${addTagTargetIndex}"]`);
+    if (tagsContainer) {
+      const c = tagColor(tag);
+      const addBtn = tagsContainer.querySelector('.nd-add-tag');
+      const span = document.createElement('span');
+      span.className = 'nd-tag';
+      span.style.cssText = `background:${c.bg};color:${c.text}`;
+      span.textContent = tag;
+      tagsContainer.insertBefore(span, addBtn);
+    }
+  } else {
+    const currentTags = (() => { try { return JSON.parse(note.tags); } catch { return []; } })();
+    currentTags.push(tag);
+    note.tags = JSON.stringify(currentTags);
 
-  // Re-render that card's tags
-  const tagsContainer = document.querySelector(`.nd-tags[data-img="${addTagTargetIndex}"]`);
-  if (tagsContainer) {
-    const c = tagColor(tag);
-    const addBtn = tagsContainer.querySelector('.nd-add-tag');
-    const span = document.createElement('span');
-    span.className = 'nd-tag';
-    span.style.cssText = `background:${c.bg};color:${c.text}`;
-    span.textContent = tag;
-    tagsContainer.insertBefore(span, addBtn);
+    const noteTagList = document.getElementById('noteTagList');
+    if (noteTagList) {
+      const c = tagColor(tag);
+      const span = document.createElement('span');
+      span.className = 'nd-tag';
+      span.style.cssText = `background:${c.bg};color:${c.text}`;
+      span.textContent = tag;
+      noteTagList.appendChild(span);
+    }
   }
 
   document.getElementById('tagInputOverlay').style.display = 'none';
@@ -1490,119 +1906,6 @@ document.getElementById('tagInputField').addEventListener('keydown', function(e)
   if (e.key === 'Enter') confirmTagInput();
   if (e.key === 'Escape') cancelTagInput();
 });
-
-function generateSummary() {
-  const note = allNotes.find(n => n.projectId === currentProjectId);
-  if (!note) return;
-
-  // Save current notes per image
-  const cards = document.querySelectorAll('.nd-card[data-index]');
-  cards.forEach(card => {
-    const idx = parseInt(card.dataset.index);
-    const textEl = card.querySelector('.nd-text');
-    if (textEl && note.imageNotes) {
-      note.imageNotes[idx] = textEl.textContent.trim();
-    }
-  });
-
-  const btn = document.querySelector('#overlay-note .o-action');
-  btn.textContent = 'AI 生成中...';
-  btn.disabled = true;
-  btn.style.opacity = '0.5';
-
-  setTimeout(() => {
-    const editor = document.getElementById('noteEditor');
-    const tagList = (() => { try { return JSON.parse(note.tags); } catch { return []; } })();
-    const project = projects.find(p => p.id === currentProjectId);
-    const imgUrls = note.imageUrls || [];
-    const imageNotes = note.imageNotes || [];
-
-    const now = new Date();
-    const dateStr = now.toLocaleDateString('zh-CN');
-    const title = `${project ? project.title : '笔记'} · AI 总结`;
-
-    const summaryLines = imageNotes.filter(t => t).map(t => `- ${t}`);
-    const summaryText = summaryLines.length > 0
-      ? summaryLines.join('\n')
-      : '本次笔记涵盖了导入截图中的关键知识点，以下是整理后的完整内容。';
-
-    const formattedContent = `
-<div class="ai-note">
-  <div class="ai-note-date">${dateStr}</div>
-  <div class="ai-note-title">${title}</div>
-
-  <div class="ai-note-section">
-    <div class="ai-note-section-title">概览</div>
-    <div class="ai-note-text">本次共处理 ${imgUrls.length} 张截图。</div>
-  </div>
-
-  ${imgUrls.map((url, i) => `
-  <div class="ai-note-image-block">
-    <img src="${url}" />
-    ${imageNotes[i] ? `<div class="ai-note-caption">${imageNotes[i]}</div>` : ''}
-  </div>
-  `).join('')}
-
-  <div class="ai-note-section">
-    <div class="ai-note-section-title">要点总结</div>
-    <div class="ai-note-text">${summaryText}</div>
-  </div>
-
-  ${tagList.length > 0 ? `
-  <div class="ai-note-tags">
-    ${tagList.map(t => { const c = tagColor(t); return `<span class="ai-note-tag" style="background:${c.bg};color:${c.text}">${t}</span>`; }).join('')}
-  </div>` : ''}
-</div>`;
-
-    editor.innerHTML = formattedContent;
-    btn.textContent = '编辑';
-    btn.disabled = false;
-    btn.style.opacity = '1';
-  }, 1000);
-}
-
-function toggleEdit() {
-  const btn = document.querySelector('#overlay-note .o-action');
-  const isEditing = btn.textContent === '保存';
-
-  if (isEditing) {
-    // Save mode
-    const note = allNotes.find(n => n.projectId === currentProjectId);
-    if (note) {
-      const aiNote = document.querySelector('.ai-note');
-      if (aiNote) {
-        note.notesText = aiNote.querySelector('.ai-note-text')?.textContent || '';
-        note.imageNotes = [];
-        aiNote.querySelectorAll('.ai-note-caption').forEach(el => {
-          note.imageNotes.push(el.textContent.trim());
-        });
-      }
-      renderNotes();
-    }
-    btn.textContent = '编辑';
-    // Remove edit styling
-    document.querySelectorAll('.ai-note-text, .ai-note-title, .ai-note-section-title, .ai-note-caption').forEach(el => {
-      el.contentEditable = 'false';
-      el.style.background = '';
-      el.style.borderRadius = '';
-      el.style.padding = '';
-    });
-  } else {
-    // Edit mode
-    btn.textContent = '保存';
-    const aiNote = document.querySelector('.ai-note');
-    if (aiNote) {
-      aiNote.querySelectorAll('.ai-note-text, .ai-note-title, .ai-note-section-title, .ai-note-caption').forEach(el => {
-        el.contentEditable = 'true';
-        el.style.background = '#F4F4F5';
-        el.style.borderRadius = '4px';
-        el.style.padding = '4px 8px';
-        el.style.outline = 'none';
-        el.style.cursor = 'text';
-      });
-    }
-  }
-}
 
 function toggleNoteTags(el) {
   const section = el.nextElementSibling;

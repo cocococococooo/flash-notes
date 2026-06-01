@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -11,10 +11,13 @@ import {
   Pressable,
   Animated,
   Dimensions,
+  Image,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { api } from "../services/api";
+import { pickImages } from "../services/imageUtils";
 import IconPark from "../components/IconPark";
+import { API_BASE_URL, POLL_INTERVAL_MS } from "../constants/config";
 
 const { width: SCREEN_W } = Dimensions.get("window");
 const CARD_W = 240;
@@ -24,6 +27,16 @@ interface Project {
   id: number;
   title: string;
   createdAt: string;
+}
+
+interface ImageData {
+  id: number;
+  projectId: number;
+  localUri: string;
+  ocrText: string;
+  aiSummary: string;
+  tags: string;
+  status: string;
 }
 
 const CAROUSEL_ITEMS = [
@@ -69,13 +82,58 @@ function CarouselCard({ item, index, currentIndex }: { item: typeof CAROUSEL_ITE
   );
 }
 
+function ImageResultCard({ image }: { image: ImageData }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const imgUri = image.localUri.startsWith("http")
+    ? image.localUri
+    : image.localUri.startsWith("/")
+    ? `${API_BASE_URL}${image.localUri}`
+    : `file:///${image.localUri.replace(/\\/g, "/")}`;
+
+  return (
+    <View style={styles.resultCard}>
+      <Image source={{ uri: imgUri }} style={styles.resultImage} />
+      {image.status === "processing" && (
+        <View style={styles.resultOverlay}>
+          <ActivityIndicator color="#FFF" size="small" />
+          <Text style={styles.resultOverlayText}>识别中...</Text>
+        </View>
+      )}
+      {image.status === "failed" && (
+        <View style={styles.resultOverlay}>
+          <Text style={styles.resultOverlayText}>识别失败</Text>
+        </View>
+      )}
+      {image.status === "done" && image.ocrText ? (
+        <TouchableOpacity
+          style={styles.resultTextWrap}
+          onPress={() => setExpanded(!expanded)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.resultTextLabel}>
+            {expanded ? "收起" : "识别结果"} ▾
+          </Text>
+          {expanded && (
+            <Text style={styles.resultText}>{image.ocrText}</Text>
+          )}
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  );
+}
+
 export default function HomeScreen() {
   const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [newTitle, setNewTitle] = useState("");
   const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [carouselIndex, setCarouselIndex] = useState(0);
+  const [importedImages, setImportedImages] = useState<ImageData[]>([]);
+  const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadProjects = useCallback(async () => {
     try {
@@ -93,6 +151,27 @@ export default function HomeScreen() {
       loadProjects();
     }, [loadProjects])
   );
+
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
+  }, []);
+
+  const startPolling = useCallback((projectId: number) => {
+    if (pollingRef.current) clearInterval(pollingRef.current);
+    pollingRef.current = setInterval(async () => {
+      try {
+        const data = await api.listImages(projectId);
+        setImportedImages(data);
+        if (data.every((img) => img.status !== "processing")) {
+          if (pollingRef.current) clearInterval(pollingRef.current);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }, POLL_INTERVAL_MS);
+  }, []);
 
   const handleCreate = async () => {
     const title = newTitle.trim();
@@ -127,6 +206,36 @@ export default function HomeScreen() {
     ]);
   };
 
+  const handleQuickImport = async () => {
+    try {
+      setImporting(true);
+      let targetProjectId: number;
+      if (projects.length > 0) {
+        targetProjectId = projects[0].id;
+      } else {
+        const project = await api.createProject("学习笔记");
+        targetProjectId = project.id;
+        await loadProjects();
+      }
+      const uris = await pickImages();
+      if (uris.length === 0) {
+        setImporting(false);
+        return;
+      }
+      const uploaded = await api.uploadImages(targetProjectId, uris);
+      setActiveProjectId(targetProjectId);
+      setImportedImages(uploaded.map((img) => ({
+        ...img,
+        projectId: targetProjectId,
+      })));
+      startPolling(targetProjectId);
+    } catch (e: any) {
+      Alert.alert("导入失败", e.message);
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const carouselPrev = () => {
     setCarouselIndex((i) => (i - 1 + CAROUSEL_ITEMS.length) % CAROUSEL_ITEMS.length);
   };
@@ -148,96 +257,123 @@ export default function HomeScreen() {
       <View style={styles.hero}>
         <Text style={styles.badge}>AI POWERED</Text>
         <Text style={styles.title}>闪记</Text>
-        <Text style={styles.subtitle}>导入截图，AI 自动生成结构化笔记</Text>
+        <Text style={styles.subtitle}>导入截图，自动识别提取文本</Text>
       </View>
 
       {/* 3D Carousel */}
-      <View style={styles.carouselSection}>
-        <View style={styles.carouselWrap}>
-          <TouchableOpacity style={[styles.navBtn, { left: 8 }]} onPress={carouselPrev} activeOpacity={0.7}>
-            <Text style={styles.navBtnText}>‹</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.navBtn, { right: 8 }]} onPress={carouselNext} activeOpacity={0.7}>
-            <Text style={styles.navBtnText}>›</Text>
-          </TouchableOpacity>
-          {CAROUSEL_ITEMS.map((item, i) => (
-            <CarouselCard key={i} item={item} index={i} currentIndex={carouselIndex} />
-          ))}
+      {importedImages.length === 0 && (
+        <View style={styles.carouselSection}>
+          <View style={styles.carouselWrap}>
+            <TouchableOpacity style={[styles.navBtn, { left: 8 }]} onPress={carouselPrev} activeOpacity={0.7}>
+              <Text style={styles.navBtnText}>‹</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.navBtn, { right: 8 }]} onPress={carouselNext} activeOpacity={0.7}>
+              <Text style={styles.navBtnText}>›</Text>
+            </TouchableOpacity>
+            {CAROUSEL_ITEMS.map((item, i) => (
+              <CarouselCard key={i} item={item} index={i} currentIndex={carouselIndex} />
+            ))}
+          </View>
+          <Text style={styles.carouselCounter}>{carouselIndex + 1} / {CAROUSEL_ITEMS.length}</Text>
         </View>
-        <Text style={styles.carouselCounter}>{carouselIndex + 1} / {CAROUSEL_ITEMS.length}</Text>
-      </View>
+      )}
 
       {/* Import Button */}
       <View style={styles.importSection}>
         <TouchableOpacity
-          style={styles.importBtnSlim}
-          onPress={() => {
-            if (projects.length === 0) {
-              Alert.alert("提示", "请先创建一个项目");
-              return;
-            }
-            router.push(`/project/${projects[0].id}`);
-          }}
+          style={[styles.importBtnSlim, importing && styles.disabled]}
+          onPress={handleQuickImport}
+          disabled={importing}
           activeOpacity={0.8}
         >
           <IconPark name="camera" size={18} color="#FFF" />
-          <Text style={styles.importBtnSlimText}>从相册导入截图</Text>
+          <Text style={styles.importBtnSlimText}>
+            {importing ? "导入中..." : "从相册导入截图"}
+          </Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.createSection}>
-        <Text style={styles.sectionTitle}>学习项目</Text>
-        <View style={styles.createRow}>
-          <TextInput
-            style={styles.input}
-            placeholder="新建项目，输入标题..."
-            placeholderTextColor="#999"
-            value={newTitle}
-            onChangeText={setNewTitle}
-            onSubmitEditing={handleCreate}
-          />
-          <TouchableOpacity
-            style={[styles.createBtn, creating && styles.disabled]}
-            onPress={handleCreate}
-            disabled={creating}
-          >
-            <Text style={styles.createBtnText}>+</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <FlatList
-        data={projects}
-        keyExtractor={(item) => String(item.id)}
-        contentContainerStyle={styles.list}
-        renderItem={({ item }) => (
-          <Pressable
-            style={styles.card}
-            onPress={() => router.push(`/project/${item.id}`)}
-            onLongPress={() => handleDelete(item)}
-          >
-            <View style={styles.cardIcon}>
-              <IconPark name="folder" size={22} color="#71717A" />
-            </View>
-            <View style={styles.cardContent}>
-              <Text style={styles.cardTitle}>{item.title}</Text>
-              <Text style={styles.cardDate}>
-                {new Date(item.createdAt).toLocaleDateString("zh-CN")}
-              </Text>
-            </View>
-            <IconPark name="arrowRight" size={18} color="#D4D4D8" />
-          </Pressable>
-        )}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <View style={{ marginBottom: 10, opacity: 0.5 }}>
-              <IconPark name="write" size={36} color="#A1A1AA" />
-            </View>
-            <Text style={styles.empty}>还没有学习项目</Text>
-            <Text style={styles.emptyHint}>输入标题创建一个吧</Text>
+      {/* Imported Images with OCR Results */}
+      {importedImages.length > 0 && (
+        <View style={styles.resultsSection}>
+          <View style={styles.resultsHeader}>
+            <Text style={styles.resultsTitle}>
+              已导入 {importedImages.length} 张截图
+            </Text>
+            {activeProjectId && (
+              <TouchableOpacity onPress={() => router.push(`/project/${activeProjectId}`)}>
+                <Text style={styles.viewProject}>查看项目 →</Text>
+              </TouchableOpacity>
+            )}
           </View>
-        }
-      />
+          <FlatList
+            data={importedImages}
+            keyExtractor={(item) => String(item.id)}
+            renderItem={({ item }) => <ImageResultCard image={item} />}
+            contentContainerStyle={styles.resultsList}
+            showsVerticalScrollIndicator={false}
+          />
+        </View>
+      )}
+
+      {/* Create Project Section */}
+      {importedImages.length === 0 && (
+        <>
+          <View style={styles.createSection}>
+            <Text style={styles.sectionTitle}>学习项目</Text>
+            <View style={styles.createRow}>
+              <TextInput
+                style={styles.input}
+                placeholder="新建项目，输入标题..."
+                placeholderTextColor="#999"
+                value={newTitle}
+                onChangeText={setNewTitle}
+                onSubmitEditing={handleCreate}
+              />
+              <TouchableOpacity
+                style={[styles.createBtn, creating && styles.disabled]}
+                onPress={handleCreate}
+                disabled={creating}
+              >
+                <Text style={styles.createBtnText}>+</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <FlatList
+            data={projects}
+            keyExtractor={(item) => String(item.id)}
+            contentContainerStyle={styles.list}
+            renderItem={({ item }) => (
+              <Pressable
+                style={styles.card}
+                onPress={() => router.push(`/project/${item.id}`)}
+                onLongPress={() => handleDelete(item)}
+              >
+                <View style={styles.cardIcon}>
+                  <IconPark name="folder" size={22} color="#71717A" />
+                </View>
+                <View style={styles.cardContent}>
+                  <Text style={styles.cardTitle}>{item.title}</Text>
+                  <Text style={styles.cardDate}>
+                    {new Date(item.createdAt).toLocaleDateString("zh-CN")}
+                  </Text>
+                </View>
+                <IconPark name="arrowRight" size={18} color="#D4D4D8" />
+              </Pressable>
+            )}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <View style={{ marginBottom: 10, opacity: 0.5 }}>
+                  <IconPark name="write" size={36} color="#A1A1AA" />
+                </View>
+                <Text style={styles.empty}>还没有学习项目</Text>
+                <Text style={styles.emptyHint}>输入标题创建一个吧</Text>
+              </View>
+            }
+          />
+        </>
+      )}
     </View>
   );
 }
@@ -245,7 +381,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FAFAFA" },
   center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#FAFAFA" },
-  hero: { paddingTop: 20, paddingHorizontal: 20, marginBottom: 20 },
+  hero: { paddingTop: 20, paddingHorizontal: 16, marginBottom: 20 },
   badge: {
     fontSize: 10,
     fontWeight: "600",
@@ -327,7 +463,7 @@ const styles = StyleSheet.create({
   },
 
   /* Import button slim */
-  importSection: { paddingHorizontal: 20, marginBottom: 28 },
+  importSection: { paddingHorizontal: 16, marginBottom: 20 },
   importBtnSlim: {
     flexDirection: "row",
     alignItems: "center",
@@ -345,25 +481,76 @@ const styles = StyleSheet.create({
   },
   importBtnSlimText: { color: "#FFF", fontWeight: "600", fontSize: 14, letterSpacing: 0.5 },
 
+  /* Results section */
+  resultsSection: { flex: 1, paddingHorizontal: 16 },
+  resultsHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  resultsTitle: { fontSize: 13, fontWeight: "600", color: "#A1A1AA", letterSpacing: 1 },
+  viewProject: { fontSize: 13, color: "#18181B", fontWeight: "500" },
+  resultsList: { paddingBottom: 20 },
+
+  resultCard: {
+    backgroundColor: "#FFF",
+    borderRadius: 14,
+    marginBottom: 14,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#ECECEE",
+  },
+  resultImage: { width: "100%", height: 180, resizeMode: "cover" },
+  resultOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 180,
+    backgroundColor: "rgba(24,24,27,0.55)",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+  },
+  resultOverlayText: { color: "#FFF", fontSize: 13, fontWeight: "500" },
+  resultTextWrap: { padding: 12 },
+  resultTextLabel: { fontSize: 12, fontWeight: "600", color: "#18181B", marginBottom: 4 },
+  resultText: {
+    fontSize: 13,
+    color: "#52525B",
+    lineHeight: 20,
+    marginTop: 4,
+    backgroundColor: "#F4F4F5",
+    padding: 10,
+    borderRadius: 8,
+  },
+
   createSection: { paddingHorizontal: 16, marginBottom: 16 },
   sectionTitle: { fontSize: 11, fontWeight: "600", color: "#A1A1AA", marginBottom: 14, letterSpacing: 2 },
-  createRow: { flexDirection: "row", gap: 8 },
+  createRow: { flexDirection: "row", gap: 12 },
   input: {
     flex: 1,
-    borderWidth: 1.5,
-    borderColor: "#E4E4E7",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    height: 48,
+    borderWidth: 1,
+    borderColor: "#EBEDF0",
+    borderRadius: 8,
+    paddingHorizontal: 12,
     fontSize: 15,
-    backgroundColor: "#FFF",
+    backgroundColor: "#F7F8FA",
   },
   createBtn: {
     backgroundColor: "#18181B",
-    borderRadius: 10,
+    borderRadius: 24,
     width: 48,
+    height: 48,
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#18181B",
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
   createBtnText: { color: "#FFF", fontWeight: "600", fontSize: 22, marginTop: -2 },
   disabled: { opacity: 0.5 },
@@ -372,11 +559,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFF",
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 8,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: "#ECECEE",
+    minHeight: 80,
   },
   cardIcon: { width: 40, height: 40, borderRadius: 10, backgroundColor: "#F4F4F5", alignItems: "center", justifyContent: "center", marginRight: 12 },
   cardContent: { flex: 1 },

@@ -47,23 +47,27 @@ export default function ProjectDetailScreen() {
     }
   }, [projectId]);
 
+  const startPolling = useCallback(() => {
+    if (pollingRef.current) clearInterval(pollingRef.current);
+    pollingRef.current = setInterval(async () => {
+      const updated = await loadImages();
+      if (updated && updated.every((img) => img.status !== "processing")) {
+        if (pollingRef.current) clearInterval(pollingRef.current);
+      }
+    }, POLL_INTERVAL_MS);
+  }, [loadImages]);
+
   useEffect(() => {
     loadImages().then((data) => {
       setLoading(false);
-      // Start polling if any images are processing
       if (data && data.some((img) => img.status === "processing")) {
-        pollingRef.current = setInterval(async () => {
-          const updated = await loadImages();
-          if (updated && updated.every((img) => img.status !== "processing")) {
-            if (pollingRef.current) clearInterval(pollingRef.current);
-          }
-        }, POLL_INTERVAL_MS);
+        startPolling();
       }
     });
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
     };
-  }, [loadImages]);
+  }, [loadImages, startPolling]);
 
   const handleImport = async () => {
     try {
@@ -71,7 +75,10 @@ export default function ProjectDetailScreen() {
       if (uris.length === 0) return;
       setUploading(true);
       await api.uploadImages(projectId, uris);
-      await loadImages();
+      const data = await loadImages();
+      if (data && data.some((img) => img.status === "processing")) {
+        startPolling();
+      }
     } catch (e: any) {
       Alert.alert("导入失败", e.message);
     } finally {
