@@ -336,15 +336,12 @@
   .note-img-ocr-result {
     padding: 4px 0;
   }
-  .ocr-result-toggle {
-    font-size: 13px;
+  .ocr-result-label {
+    font-size: 12px;
     font-weight: 600;
     color: var(--text-primary);
-    cursor: pointer;
-    user-select: none;
-    transition: opacity 0.2s;
+    margin-bottom: 2px;
   }
-  .ocr-result-toggle:hover { opacity: 0.6; }
   .ocr-result-text {
     font-size: 13px;
     color: var(--text-secondary);
@@ -355,9 +352,12 @@
     margin-top: 6px;
     font-family: "SF Mono", Monaco, "Cascadia Code", monospace;
     white-space: pre-wrap;
-    display: none;
+    outline: none;
+    transition: background 0.15s;
   }
-  .ocr-result-text.open { display: block; }
+  .ocr-result-text:focus {
+    background: #E8E8EA;
+  }
 
   /* ===== TAB 2: NOTES LIST ===== */
   .notes-header {
@@ -1094,7 +1094,6 @@
       </button>
       <div class="note-topbar-title" id="noteTopbarTitle">笔记标题</div>
       <div class="note-topbar-actions">
-        <button class="note-save-btn" onclick="alert('笔记已保存')">保存</button>
         <button class="note-share-btn" onclick="alert('分享功能开发中...')">
           <span data-icon="share"></span>
         </button>
@@ -1660,37 +1659,22 @@ function openNoteDetail(projectId, isNewImport) {
           html += `<div class="note-img-ocr-status" id="noteOcrStatus${i}">`;
           html += `<div class="ocr-spinner-sm"></div><span>识别中...</span>`;
           html += `</div>`;
-          html += `<div class="note-img-ocr-result" id="noteOcrResult${i}" style="display:none">`;
-          html += `<div class="ocr-result-toggle" onclick="toggleNoteOcr(${i})">识别结果 ▾</div>`;
-          html += `<div class="ocr-result-text" id="noteOcrText${i}">${ocrTexts[i] || ''}</div>`;
+          html += `<div class="note-img-ocr-result" id="noteOcrResult${i}">`;
+          html += `<div class="ocr-result-label">识别结果</div>`;
+          html += `<div class="ocr-result-text" contenteditable="true" id="noteOcrText${i}" onblur="saveOcrText(${i}, this.textContent)"></div>`;
           html += `</div>`;
         } else {
           const ocrText = ocrTexts[i] || '';
           if (ocrText) {
             html += `<div class="note-img-ocr-result">`;
-            html += `<div class="ocr-result-toggle" onclick="toggleNoteOcr(${i})">识别结果 ▾</div>`;
-            html += `<div class="ocr-result-text" id="noteOcrText${i}">${ocrText}</div>`;
+            html += `<div class="ocr-result-label">识别结果</div>`;
+            html += `<div class="ocr-result-text" contenteditable="true" onblur="saveOcrText(${i}, this.textContent)">${ocrText}</div>`;
             html += `</div>`;
           }
         }
         html += `</div>`;
       });
     }
-
-    // Content sections
-    html += `
-      <div class="note-section">
-        <div class="note-section-title" contenteditable="true" data-placeholder="输入副标题...">Research & Analysis</div>
-        <div class="note-section-content" contenteditable="true" data-placeholder="输入内容...">Explore product data to gain a deeper understanding of the users.</div>
-      </div>
-    `;
-
-    html += `
-      <div class="note-section">
-        <div class="note-section-title" contenteditable="true" data-placeholder="输入副标题...">User Testing & Feedback</div>
-        <div class="note-section-content" contenteditable="true" data-placeholder="输入内容...">Gather and analyze feedback to refine the design further.</div>
-      </div>
-    `;
 
     editor.innerHTML = html;
     initIcons();
@@ -1709,9 +1693,13 @@ function openNoteDetail(projectId, isNewImport) {
   document.getElementById('overlay-note').classList.add('open');
 }
 
-function toggleNoteOcr(index) {
-  const el = document.getElementById('noteOcrText' + index);
-  if (el) el.classList.toggle('open');
+function toggleNoteOcr() {}
+
+function saveOcrText(index, text) {
+  var note = allNotes.find(function(n) { return n.projectId === currentProjectId; });
+  if (note && note.imageOcrTexts) {
+    note.imageOcrTexts[index] = text.trim();
+  }
 }
 
 function runTesseractOcr(imageUrl, index) {
@@ -1729,7 +1717,6 @@ function runTesseractOcr(imageUrl, index) {
       try { if (worker) worker.terminate(); } catch(e) {}
       textEl.textContent = '（识别超时，请重试）';
       statusEl.style.display = 'none';
-      resultEl.style.display = 'block';
     }
   }, 30000);
 
@@ -1749,13 +1736,11 @@ function runTesseractOcr(imageUrl, index) {
     var text = result.data.text.trim();
     textEl.textContent = text || '（未识别到文字）';
     statusEl.style.display = 'none';
-    resultEl.style.display = 'block';
   }).catch(function(err) {
     if (done) return;
     done = true;
     textEl.textContent = '（识别失败: ' + (err.message || err) + '）';
     statusEl.style.display = 'none';
-    resultEl.style.display = 'block';
   });
 }
 
