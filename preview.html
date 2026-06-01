@@ -228,6 +228,14 @@
   .empty-projects .ep-h { font-size: 13px; color: var(--text-quaternary); margin-top: 4px; }
 
   /* OCR Result Card */
+  .ocr-progress-bar {
+    text-align: center;
+    padding: 6px 0 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    letter-spacing: 1px;
+  }
   .ocr-result-card {
     background: var(--surface);
     border-radius: var(--radius-md);
@@ -357,6 +365,178 @@
   }
   .ocr-result-text:focus {
     background: #E8E8EA;
+  }
+
+  /* Save Modal - Bottom Sheet Style */
+  .save-modal-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.35);
+    z-index: 400;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    animation: fadeIn 0.2s ease;
+  }
+  .save-modal {
+    background: var(--surface);
+    border-radius: 16px 16px 0 0;
+    padding: 0 20px 34px;
+    width: 100%;
+    max-width: 480px;
+    animation: slideUp 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .save-modal-section { margin-bottom: 16px; }
+  .save-modal-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .save-modal-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .save-modal-section-header .save-modal-label {
+    margin-bottom: 0;
+  }
+  .save-modal-new-project-text {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+  .save-modal-new-project-text:hover {
+    color: #333;
+  }
+  .save-modal-project-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.15s;
+    margin-bottom: 4px;
+  }
+  .save-modal-project-item:hover { background: #F4F4F5; }
+  .save-modal-project-item.selected { background: #EEF0FF; }
+  .save-modal-project-item .smpi {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: #F4F4F5; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .save-modal-project-item .smpi svg { width: 16px; height: 16px; color: var(--text-secondary); }
+  .save-modal-project-item .smpi.selected { background: #18181B; }
+  .save-modal-project-item .smpi.selected svg { color: #FFF; }
+  .save-modal-project-item .spt { font-size: 14px; font-weight: 500; color: var(--text-primary); }
+
+  .save-modal-tags { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .save-modal-tags .stag {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 6px 12px; border-radius: 8px;
+    font-size: 13px; font-weight: 500; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .save-modal-tags .stag .stag-close {
+    margin-left: 4px; font-size: 14px; font-weight: 600;
+    opacity: 0.5; transition: opacity 0.15s; line-height: 1;
+  }
+  .save-modal-tags .stag:hover { opacity: 0.85; }
+  .save-modal-tags .stag .stag-close:hover { opacity: 1; }
+  .stag-orange { background: #FFF3E6; color: #E67700; }
+  .stag-blue { background: #E6F4FF; color: #0070F3; }
+  .stag-purple { background: #F0E6FF; color: #7C3AED; }
+  .stag-yellow { background: #FFF8E6; color: #B8860B; }
+  .stag-green { background: #E6FAF0; color: #16A34A; }
+  .stag-red { background: #FFE6E6; color: #DC2626; }
+  .stag-gray { background: #F4F4F5; color: #71717A; }
+  .stag-pink { background: #FFE6F0; color: #DB2777; }
+  .stag-cyan { background: #E6FFFE; color: #0891B2; }
+  .save-modal-tag-input {
+    width: 100%; border: 1.5px solid var(--border); border-radius: 8px;
+    padding: 9px 12px; font-size: 13px; outline: none;
+    font-family: inherit; background: var(--bg);
+    transition: border-color 0.2s;
+  }
+  .save-modal-tag-input:focus { border-color: var(--accent); }
+  .save-modal-actions {
+    display: flex; gap: 10px; margin-top: 18px;
+  }
+  .save-modal-cancel {
+    flex: 1; border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 13px 0; font-size: 15px; font-weight: 600;
+    background: var(--surface); color: var(--text-secondary); cursor: pointer;
+    font-family: inherit; transition: all 0.2s;
+  }
+  .save-modal-cancel:hover { background: #F4F4F5; }
+  .save-modal-confirm {
+    flex: 1; border: none; border-radius: 10px;
+    padding: 13px 0; font-size: 15px; font-weight: 600;
+    background: var(--accent); color: #FFF; cursor: pointer;
+    font-family: inherit; transition: background 0.2s;
+  }
+  .save-modal-confirm:hover { background: #333; }
+
+  /* ===== BOTTOM SHEET ===== */
+  .bottom-sheet-overlay {
+    position: fixed; inset: 0; z-index: 9000;
+    background: rgba(0,0,0,0.35);
+    display: flex; align-items: flex-end; justify-content: center;
+    animation: fadeIn 0.2s ease;
+  }
+  .bottom-sheet {
+    width: 100%; max-width: 480px;
+    background: var(--surface);
+    border-radius: 16px 16px 0 0;
+    padding: 0 20px 34px;
+    animation: slideUp 0.28s cubic-bezier(0.22,1,0.36,1);
+  }
+  .bottom-sheet-handle {
+    width: 36px; height: 4px; border-radius: 2px;
+    background: #D4D4D8; margin: 10px auto 0;
+  }
+  .bottom-sheet-title {
+    font-size: 17px; font-weight: 700; color: var(--text-primary);
+    padding: 18px 0 14px;
+  }
+  .bottom-sheet-body { display: flex; flex-direction: column; gap: 14px; }
+  .bottom-sheet-input {
+    width: 100%; border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 12px 14px; font-size: 15px; outline: none;
+    font-family: inherit; background: var(--bg); box-sizing: border-box;
+    transition: border-color 0.2s;
+  }
+  .bottom-sheet-input:focus { border-color: var(--accent); }
+  .bottom-sheet-actions {
+    display: flex; gap: 10px;
+  }
+  .bottom-sheet-cancel-btn {
+    flex: 1; border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 13px 0; font-size: 15px; font-weight: 600;
+    background: var(--surface); color: var(--text-secondary); cursor: pointer;
+    font-family: inherit; transition: all 0.2s;
+  }
+  .bottom-sheet-cancel-btn:hover { background: #F4F4F5; }
+  .bottom-sheet-confirm-btn {
+    flex: 1; border: none; border-radius: 10px;
+    padding: 13px 0; font-size: 15px; font-weight: 600;
+    background: var(--accent); color: #FFF; cursor: pointer;
+    font-family: inherit; transition: background 0.2s;
+  }
+  .bottom-sheet-confirm-btn:hover { background: #333; }
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
 
   /* ===== TAB 2: NOTES LIST ===== */
@@ -870,6 +1050,20 @@
   .note-save-btn:active {
     transform: scale(0.95);
   }
+  .note-next-btn {
+    background: #18181B;
+    color: #FFF;
+    border: none;
+    border-radius: 100px;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+  .note-next-btn:hover { background: #27272A; }
+  .note-next-btn:active { transform: scale(0.95); }
   .note-share-btn {
     width: 36px;
     height: 36px;
@@ -1094,6 +1288,8 @@
       </button>
       <div class="note-topbar-title" id="noteTopbarTitle">笔记标题</div>
       <div class="note-topbar-actions">
+        <button class="note-next-btn" id="noteNextBtn" onclick="goNextImage()">下一张</button>
+        <button class="note-save-btn" id="noteSaveBtn" style="display:none" onclick="openSaveModal()">保存</button>
         <button class="note-share-btn" onclick="alert('分享功能开发中...')">
           <span data-icon="share"></span>
         </button>
@@ -1123,6 +1319,50 @@
   </div>
 
   <input type="file" id="fileInput" accept="image/*" multiple style="display:none" onchange="handleFilePick(event)" />
+
+  <!-- New Project Bottom Sheet -->
+  <div class="bottom-sheet-overlay" id="newProjectOverlay" style="display:none" onclick="closeNewProjectSheet()">
+    <div class="bottom-sheet" onclick="event.stopPropagation()">
+      <div class="bottom-sheet-handle"></div>
+      <div class="bottom-sheet-title">新建项目</div>
+      <div class="bottom-sheet-body">
+        <input type="text" id="newProjectName" placeholder="输入项目名称" class="bottom-sheet-input" />
+        <div class="bottom-sheet-actions">
+          <button class="bottom-sheet-cancel-btn" onclick="closeNewProjectSheet()">取消</button>
+          <button class="bottom-sheet-confirm-btn" onclick="createAndSelectProject()">创建</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save Modal -->
+  <div class="save-modal-overlay" id="saveModalOverlay" style="display:none" onclick="closeSaveModal()">
+    <div class="save-modal" onclick="event.stopPropagation()">
+      <div class="bottom-sheet-handle"></div>
+      <div class="bottom-sheet-title">保存笔记到</div>
+
+      <div class="save-modal-section">
+        <div class="save-modal-section-header">
+          <div class="save-modal-label">选择项目</div>
+          <div class="save-modal-new-project-text" id="saveNewProjectBtn" onclick="showNewProjectInput()">+ 新建项目</div>
+        </div>
+        <div id="saveProjectList"></div>
+      </div>
+
+      <div class="save-modal-section">
+        <div class="save-modal-label">添加标签</div>
+        <div class="save-modal-tags" id="saveModalTags"></div>
+        <div class="save-modal-tag-input-wrap">
+          <input type="text" id="saveModalTagInput" placeholder="输入标签后回车" class="save-modal-tag-input" />
+        </div>
+      </div>
+
+      <div class="save-modal-actions">
+        <button class="save-modal-cancel" onclick="closeSaveModal()">取消</button>
+        <button class="save-modal-confirm" onclick="confirmSave()">确定保存</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -1630,67 +1870,102 @@ function updateNoteCount() {
 
 // ===================== NOTE DETAIL =====================
 let currentImageIndex = 0;
+let isProcessingNewImport = false;
 
 function openNoteDetail(projectId, isNewImport) {
   currentProjectId = projectId;
   currentImageIndex = 0;
-  const note = allNotes.find(n => n.projectId === projectId);
+  isProcessingNewImport = !!isNewImport;
+  var note = allNotes.find(function(n) { return n.projectId === projectId; });
 
-  const editor = document.getElementById('noteEditor');
-  const topbarTitle = document.getElementById('noteTopbarTitle');
-  
+  var editor = document.getElementById('noteEditor');
+  var topbarTitle = document.getElementById('noteTopbarTitle');
+  var nextBtn = document.getElementById('noteNextBtn');
+  var saveBtn = document.getElementById('noteSaveBtn');
+
   if (note) {
-    const noteTitle = note.title || note.projectTitle || '新笔记';
-    topbarTitle.textContent = noteTitle;
-    
-    const imgUrls = note.imageUrls || [];
-    let html = '';
-
-    // Title (editable)
-    html += `<div class="note-title" contenteditable="true" data-placeholder="输入标题..." onblur="saveNoteTitle(this.textContent)">${noteTitle}</div>`;
-
-    // Image list with OCR processing
-    if (imgUrls.length > 0) {
-      const ocrTexts = note.imageOcrTexts || [];
-      imgUrls.forEach((url, i) => {
-        html += `<div class="note-img-block" id="noteImgBlock${i}">`;
-        html += `<div class="note-img-thumb" onclick="previewNoteImage('${url}')"><img src="${url}" /></div>`;
-        if (isNewImport) {
-          html += `<div class="note-img-ocr-status" id="noteOcrStatus${i}">`;
-          html += `<div class="ocr-spinner-sm"></div><span>识别中...</span>`;
-          html += `</div>`;
-          html += `<div class="note-img-ocr-result" id="noteOcrResult${i}">`;
-          html += `<div class="ocr-result-label">识别结果</div>`;
-          html += `<div class="ocr-result-text" contenteditable="true" id="noteOcrText${i}" onblur="saveOcrText(${i}, this.textContent)"></div>`;
-          html += `</div>`;
-        } else {
-          const ocrText = ocrTexts[i] || '';
-          if (ocrText) {
-            html += `<div class="note-img-ocr-result">`;
-            html += `<div class="ocr-result-label">识别结果</div>`;
-            html += `<div class="ocr-result-text" contenteditable="true" onblur="saveOcrText(${i}, this.textContent)">${ocrText}</div>`;
-            html += `</div>`;
-          }
-        }
-        html += `</div>`;
-      });
-    }
-
-    editor.innerHTML = html;
-    initIcons();
-    
-    // Simulate OCR completion for new imports using Tesseract.js
-    if (isNewImport) {
-      imgUrls.forEach((url, i) => {
-        runTesseractOcr(url, i);
-      });
-    }
+    topbarTitle.textContent = note.title || note.projectTitle || '新笔记';
+    if (nextBtn) nextBtn.style.display = 'inline-block';
+    if (saveBtn) saveBtn.style.display = 'none';
+    renderCurrentImage(note);
   } else {
     topbarTitle.textContent = '新笔记';
     editor.innerHTML = '<div class="note-empty" style="color:#AAA;text-align:center;margin-top:60px">点击工具栏开始编辑</div>';
   }
 
   document.getElementById('overlay-note').classList.add('open');
+}
+
+function renderCurrentImage(note) {
+  var editor = document.getElementById('noteEditor');
+  var topbarTitle = document.getElementById('noteTopbarTitle');
+  var nextBtn = document.getElementById('noteNextBtn');
+  var saveBtn = document.getElementById('noteSaveBtn');
+  var imgUrls = note.imageUrls || [];
+  var ocrTexts = note.imageOcrTexts || [];
+  var i = currentImageIndex;
+  var total = imgUrls.length;
+
+  if (total <= 1) {
+    if (nextBtn) nextBtn.style.display = 'none';
+    if (saveBtn) saveBtn.style.display = 'inline-block';
+  } else if (i >= total) {
+    if (nextBtn) nextBtn.style.display = 'none';
+    if (saveBtn) saveBtn.style.display = 'inline-block';
+    editor.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--text-tertiary)">'
+      + '<div style="font-size:48px;margin-bottom:16px">&#10003;</div>'
+      + '<div style="font-size:16px;font-weight:600;color:var(--text-primary);margin-bottom:8px">全部识别完成</div>'
+      + '<div style="font-size:13px">共处理 ' + total + ' 张截图</div></div>';
+    return;
+  } else {
+    if (i >= total - 1) {
+      if (nextBtn) nextBtn.style.display = 'none';
+      if (saveBtn) saveBtn.style.display = 'inline-block';
+    } else {
+      if (nextBtn) {
+        nextBtn.style.display = 'inline-block';
+        nextBtn.textContent = '下一张（' + (i + 1) + '/' + total + '）';
+      }
+      if (saveBtn) saveBtn.style.display = 'none';
+    }
+  }
+
+  var url = imgUrls[i];
+  var html = '';
+  editor.innerHTML = html;
+  html += '<div class="note-img-block">';
+  html += '<div class="note-img-thumb"><img src="' + url + '" /></div>';
+
+  if (isProcessingNewImport) {
+    html += '<div class="note-img-ocr-status" id="noteOcrStatus0">';
+    html += '<div class="ocr-spinner-sm"></div><span>识别中...</span>';
+    html += '</div>';
+    html += '<div class="note-img-ocr-result" id="noteOcrResult0">';
+    html += '<div class="ocr-result-label">识别结果</div>';
+    html += '<div class="ocr-result-text" contenteditable="true" id="noteOcrText0" onblur="saveOcrText(' + i + ', this.textContent)"></div>';
+    html += '</div>';
+  } else {
+    var ocrText = ocrTexts[i] || '';
+    html += '<div class="note-img-ocr-result">';
+    html += '<div class="ocr-result-label">识别结果</div>';
+    html += '<div class="ocr-result-text" contenteditable="true" onblur="saveOcrText(' + i + ', this.textContent)">' + ocrText + '</div>';
+    html += '</div>';
+  }
+
+  html += '</div>';
+  editor.innerHTML = html;
+
+  if (isProcessingNewImport) {
+    runTesseractOcr(url, 0);
+  }
+}
+
+function goNextImage() {
+  var note = allNotes.find(function(n) { return n.projectId === currentProjectId; });
+  if (!note) return;
+  saveOcrText(currentImageIndex, document.getElementById('noteOcrText0') ? document.getElementById('noteOcrText0').textContent : '');
+  currentImageIndex++;
+  renderCurrentImage(note);
 }
 
 function toggleNoteOcr() {}
@@ -1702,19 +1977,159 @@ function saveOcrText(index, text) {
   }
 }
 
+// ===================== SAVE MODAL =====================
+var _selectedSaveProjectId = null;
+var _saveModalTags = [];
+
+function openSaveModal() {
+  document.getElementById('saveModalOverlay').style.display = 'flex';
+  _selectedSaveProjectId = null;
+  renderSaveProjectList();
+
+  var note = allNotes.find(function(n) { return n.projectId === currentProjectId; });
+  _saveModalTags = [];
+  try { _saveModalTags = JSON.parse(note.tags || '[]'); } catch(e) {}
+  renderSaveModalTags();
+
+  var tagInput = document.getElementById('saveModalTagInput');
+  tagInput.value = '';
+  tagInput.onkeydown = function(e) {
+    if (e.key === 'Enter') {
+      var t = tagInput.value.trim();
+      if (t) {
+        _saveModalTags.push(t);
+        renderSaveModalTags();
+        tagInput.value = '';
+      }
+    }
+  };
+}
+
+var tagColors = [
+  { cls: 'stag-orange' },
+  { cls: 'stag-blue' },
+  { cls: 'stag-purple' },
+  { cls: 'stag-yellow' },
+  { cls: 'stag-green' },
+  { cls: 'stag-red' },
+  { cls: 'stag-gray' },
+  { cls: 'stag-pink' },
+  { cls: 'stag-cyan' }
+];
+function getTagColor(tag) {
+  var hash = 0;
+  for (var i = 0; i < tag.length; i++) hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+  return tagColors[Math.abs(hash) % tagColors.length];
+}
+
+function renderSaveModalTags() {
+  var container = document.getElementById('saveModalTags');
+  container.innerHTML = _saveModalTags.map(function(t, i) {
+    var c = getTagColor(t);
+    return '<span class="stag ' + c.cls + '">'
+      + t
+      + '<span class="stag-close" onclick="event.stopPropagation();removeSaveTag(' + i + ')">×</span>'
+      + '</span>';
+  }).join('');
+}
+
+function removeSaveTag(index) {
+  _saveModalTags.splice(index, 1);
+  renderSaveModalTags();
+}
+
+function selectSaveProject(el, id) {
+  _selectedSaveProjectId = id;
+  document.querySelectorAll('.save-modal-project-item').forEach(function(item) {
+    item.classList.toggle('selected', item.dataset.id == id);
+    item.querySelector('.smpi').classList.toggle('selected', item.dataset.id == id);
+  });
+}
+
+function confirmSave() {
+  if (!_selectedSaveProjectId) {
+    alert('请先选择一个项目');
+    return;
+  }
+  var note = allNotes.find(function(n) { return n.projectId === currentProjectId; });
+  if (note) {
+    note.projectId = _selectedSaveProjectId;
+    note.tags = JSON.stringify(_saveModalTags);
+    note.updatedAt = new Date().toISOString();
+    var proj = projects.find(function(p) { return p.id === _selectedSaveProjectId; });
+    if (proj) note.projectTitle = proj.title;
+  }
+  closeSaveModal();
+  closeOverlay('overlay-note');
+  _selectedSaveProjectId = null;
+}
+
+function closeSaveModal() {
+  document.getElementById('saveModalOverlay').style.display = 'none';
+}
+
+function showNewProjectInput() {
+  document.getElementById('newProjectOverlay').style.display = 'flex';
+  var input = document.getElementById('newProjectName');
+  input.value = '';
+  input.onkeydown = function(e) {
+    if (e.key === 'Enter') createAndSelectProject();
+  };
+  setTimeout(function() { input.focus(); }, 100);
+}
+
+function closeNewProjectSheet() {
+  document.getElementById('newProjectOverlay').style.display = 'none';
+}
+
+function createAndSelectProject() {
+  var name = document.getElementById('newProjectName').value.trim();
+  if (!name) return;
+  var project = { id: Date.now(), title: name, createdAt: new Date().toISOString() };
+  projects.push(project);
+  projectImages[project.id] = [];
+  renderProjects();
+  renderSaveProjectList();
+  selectSaveProjectById(project.id);
+  closeNewProjectSheet();
+}
+
+function renderSaveProjectList() {
+  var projectList = document.getElementById('saveProjectList');
+  if (projects.length === 0) {
+    projectList.innerHTML = '<div style="padding: 16px 12px; color: var(--text-tertiary); font-size: 13px; text-align: center;">暂无项目，请新建项目</div>';
+    return;
+  }
+  projectList.innerHTML = projects.map(function(p) {
+    var isSelected = p.id === _selectedSaveProjectId;
+    return '<div class="save-modal-project-item' + (isSelected ? ' selected' : '') + '" data-id="' + p.id + '" onclick="selectSaveProject(this, ' + p.id + ')">'
+      + '<div class="smpi' + (isSelected ? ' selected' : '') + '">' + icons.folder + '</div>'
+      + '<div class="spt">' + p.title + '</div>'
+      + (isSelected ? '<div class="smpi-check" style="margin-left:auto;color:var(--accent)">✓</div>' : '')
+      + '</div>';
+  }).join('');
+}
+
+function selectSaveProjectById(id) {
+  _selectedSaveProjectId = id;
+  document.querySelectorAll('.save-modal-project-item').forEach(function(item) {
+    var isSelected = item.dataset.id == id;
+    item.classList.toggle('selected', isSelected);
+    item.querySelector('.smpi').classList.toggle('selected', isSelected);
+  });
+}
+
 function runTesseractOcr(imageUrl, index) {
-  const statusEl = document.getElementById('noteOcrStatus' + index);
-  const resultEl = document.getElementById('noteOcrResult' + index);
-  const textEl = document.getElementById('noteOcrText' + index);
+  var statusEl = document.getElementById('noteOcrStatus' + index);
+  var resultEl = document.getElementById('noteOcrResult' + index);
+  var textEl = document.getElementById('noteOcrText' + index);
   if (!statusEl || !resultEl || !textEl) return;
 
-  var worker = null;
   var done = false;
 
   setTimeout(function() {
     if (!done) {
       done = true;
-      try { if (worker) worker.terminate(); } catch(e) {}
       textEl.textContent = '（识别超时，请重试）';
       statusEl.style.display = 'none';
     }
