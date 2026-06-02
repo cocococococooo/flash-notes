@@ -55,6 +55,7 @@ function stripMarkdown(md: string): string {
 export default function NotesScreen() {
   const router = useRouter();
   const [notes, setNotes] = useState<NoteItem[]>([]);
+  const [projectsList, setProjectsList] = useState<{ id: number; title: string; createdAt: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
@@ -62,13 +63,18 @@ export default function NotesScreen() {
 
   const loadNotes = useCallback(async () => {
     try {
-      const data = await api.listAllNotes();
-      setNotes(data);
+      const notesData = await api.listAllNotes();
+      setNotes(notesData);
     } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
+      console.error("load notes error:", e);
     }
+    try {
+      const projectsData = await api.listProjects();
+      setProjectsList(projectsData);
+    } catch (e) {
+      console.error("load projects error:", e);
+    }
+    setLoading(false);
   }, []);
 
   useFocusEffect(
@@ -83,9 +89,9 @@ export default function NotesScreen() {
     setCreating(true);
     try {
       const project = await api.createProject(title);
+      setProjectsList((prev) => [{ id: project.id, title: project.title, createdAt: project.createdAt }, ...prev]);
       setCreateModalVisible(false);
       setNewFolderName("");
-      router.push(`/note/${project.id}`);
     } catch (e: any) {
       console.error(e);
     } finally {
@@ -95,10 +101,25 @@ export default function NotesScreen() {
 
   const projects = useMemo(() => {
     const map = new Map<number, { id: number; title: string; count: number; note: NoteItem | null }>();
+    
+    // 先添加所有项目
+    projectsList.forEach((project) => {
+      map.set(project.id, {
+        id: project.id,
+        title: project.title || "未命名项目",
+        count: 0,
+        note: null,
+      });
+    });
+    
+    // 再添加笔记数据
     notes.forEach((note) => {
       const existing = map.get(note.projectId);
       if (existing) {
         existing.count++;
+        if (!existing.note) {
+          existing.note = note;
+        }
       } else {
         map.set(note.projectId, {
           id: note.projectId,
@@ -108,8 +129,9 @@ export default function NotesScreen() {
         });
       }
     });
+    
     return Array.from(map.values());
-  }, [notes]);
+  }, [notes, projectsList]);
 
   if (loading) {
     return (

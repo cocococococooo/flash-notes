@@ -1558,7 +1558,7 @@
         <input type="text" id="newProjectName" placeholder="输入项目名称" class="bottom-sheet-input" />
         <div class="bottom-sheet-actions">
           <button class="bottom-sheet-cancel-btn" onclick="closeNewProjectSheet()">取消</button>
-          <button class="bottom-sheet-confirm-btn" onclick="createAndSelectProject()">创建</button>
+          <button class="bottom-sheet-confirm-btn" onclick="handleNewProjectConfirm()">创建</button>
         </div>
       </div>
     </div>
@@ -2110,6 +2110,16 @@ function renderNotes() {
     projectMap.get(n.projectId).count++;
   });
 
+  projects.forEach(p => {
+    if (!projectMap.has(p.id)) {
+      projectMap.set(p.id, {
+        id: p.id,
+        title: p.title || '未命名项目',
+        count: 0,
+      });
+    }
+  });
+
   const folders = Array.from(projectMap.values());
   document.getElementById('noteCount').textContent = folders.length + ' 个';
 
@@ -2379,11 +2389,26 @@ function showNewProjectInput() {
   input.onkeydown = function(e) {
     if (e.key === 'Enter') createAndSelectProject();
   };
+  window._newProjectMode = 'select';
+  var btn = document.querySelector('#newProjectOverlay .bottom-sheet-confirm-btn');
+  if (btn) {
+    btn.textContent = '创建';
+    btn.onclick = createAndSelectProject;
+  }
   setTimeout(function() { input.focus(); }, 100);
 }
 
 function closeNewProjectSheet() {
   document.getElementById('newProjectOverlay').style.display = 'none';
+  window._newProjectMode = null;
+}
+
+function handleNewProjectConfirm() {
+  if (window._newProjectMode === 'folder') {
+    createFolderFromSheet();
+  } else {
+    createAndSelectProject();
+  }
 }
 
 function createAndSelectProject() {
@@ -2405,6 +2430,13 @@ function showNewFolderSheet() {
   input.onkeydown = function(e) {
     if (e.key === 'Enter') createFolderFromSheet();
   };
+  window._newProjectMode = 'folder';
+  document.getElementById('newProjectOverlay').dataset.mode = 'folder';
+  var btn = document.querySelector('#newProjectOverlay .bottom-sheet-confirm-btn');
+  if (btn) {
+    btn.textContent = '创建';
+    btn.onclick = createFolderFromSheet;
+  }
   setTimeout(function() { input.focus(); }, 100);
 }
 
@@ -2417,7 +2449,6 @@ function createFolderFromSheet() {
   allNotes.push({ projectId: project.id, projectTitle: name, title: name, content: '', tags: '[]', imageUrls: [], imageOcrTexts: [] });
   closeNewProjectSheet();
   renderNotes();
-  openProjectNotes(project.id);
 }
 
 function renderSaveProjectList() {
