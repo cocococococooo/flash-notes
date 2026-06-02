@@ -14,10 +14,10 @@ import {
   Image,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
-import { api } from "../services/api";
-import { pickImages } from "../services/imageUtils";
-import IconPark from "../components/IconPark";
-import { API_BASE_URL, POLL_INTERVAL_MS } from "../constants/config";
+import { api } from "../../services/api";
+import { pickImages } from "../../services/imageUtils";
+import IconPark from "../../components/IconPark";
+import { API_BASE_URL, POLL_INTERVAL_MS } from "../../constants/config";
 
 const { width: SCREEN_W } = Dimensions.get("window");
 const CARD_W = 240;

@@ -316,19 +316,6 @@
     display: block;
   }
   .note-img-block .note-img-thumb:hover { background: #E8E8EA; }
-  .note-img-ocr-status {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 16px;
-    font-size: 13px;
-    color: var(--text-secondary);
-    font-weight: 500;
-    background: rgba(243, 243, 249, 0.6);
-    border-radius: 12px;
-    border: 1px solid rgba(227, 226, 229, 0.6);
-    margin-bottom: 12px;
-  }
   .ocr-spinner-sm {
     width: 16px;
     height: 16px;
@@ -782,16 +769,17 @@
     background: var(--bg);
     z-index: 200;
     flex-direction: column;
-    animation: overlayIn 0.3s ease;
   }
-  @keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
   .overlay.open { display: flex; }
+
+  @keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
 
   .overlay-topbar {
     display: flex;
     align-items: center;
     padding: 10px 20px;
     border-bottom: 1px solid var(--border);
+    background: #FFF;
     flex-shrink: 0;
     gap: 12px;
   }
@@ -1040,68 +1028,60 @@
   }
 
   /* Tag input floating layer */
+  /* Tag Bottom Sheet */
   .tag-input-overlay {
     position: absolute; top: 0; left: 0; right: 0; bottom: 0;
     background: rgba(0,0,0,0.4); z-index: 400;
-    display: flex; align-items: center; justify-content: center;
-    animation: fadeIn 0.2s ease;
+    display: flex; align-items: flex-end; justify-content: center;
+    animation: tagFadeIn 0.2s ease;
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
   }
-  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes tagFadeIn { from { opacity: 0; } to { opacity: 1; } }
   .tag-input-modal {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(40px);
-    -webkit-backdrop-filter: blur(40px);
-    border-radius: 20px;
-    padding: 24px;
-    width: 85%;
-    max-width: 320px;
-    box-shadow: 0 4px 6px rgba(0, 75, 118, 0.04),
-                0 10px 20px rgba(0, 61, 118, 0.03),
-                0 20px 40px rgba(0, 82, 118, 0.02);
-    border: 1px solid rgba(227, 226, 229, 0.6);
-    animation: modalIn 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+    background: #FFFFFF;
+    border-radius: 20px 20px 0 0;
+    padding: 24px 20px 32px;
+    width: 100%;
+    max-width: 100%;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+    animation: tagSlideUp 0.3s cubic-bezier(0.22, 1, 0.36, 1);
   }
-  @keyframes modalIn { from { opacity:0; transform:scale(0.95) translateY(10px); } to { opacity:1; transform:scale(1) translateY(0); } }
+  @keyframes tagSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
   .tag-input-header {
-    font-size: 16px; font-weight: 600; color: var(--text-primary);
-    margin-bottom: 16px;
+    font-size: 17px; font-weight: 600; color: #18181B;
+    margin-bottom: 16px; text-align: center;
   }
   .tag-input-modal input {
-    width: 100%; border: 1px solid rgba(227, 226, 229, 0.6); border-radius: 12px;
-    padding: 12px 16px; font-size: 14px; outline: none;
-    font-family: inherit; background: rgba(243, 243, 249, 0.6);
-    transition: all 0.2s;
-    box-sizing: border-box;
+    width: 100%; border: 1px solid rgba(0,0,0,0.12); border-radius: 12px;
+    padding: 14px 16px; font-size: 15px; outline: none;
+    font-family: inherit; background: #F4F4F5;
+    transition: all 0.2s; box-sizing: border-box;
   }
   .tag-input-modal input:focus {
-    border-color: rgba(227, 226, 229, 0.8);
-    background: rgba(243, 243, 249, 0.8);
+    border-color: #18181B;
+    background: #FFF;
   }
   .tag-input-modal input::placeholder {
-    color: var(--text-quaternary);
+    color: #A1A1AA;
   }
   .tag-input-actions {
-    display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;
+    display: flex; gap: 10px; margin-top: 16px;
   }
   .tag-input-cancel, .tag-input-confirm {
-    border: none; border-radius: 100px; padding: 10px 24px;
-    font-size: 14px; font-weight: 500; cursor: pointer;
+    flex: 1; border: none; border-radius: 100px; padding: 12px;
+    font-size: 15px; font-weight: 600; cursor: pointer;
     font-family: inherit; transition: all 0.2s;
   }
   .tag-input-cancel {
-    background: rgba(243, 243, 249, 0.8); color: var(--text-secondary);
-    border: 1px solid rgba(227, 226, 229, 0.6);
+    background: #F4F4F5; color: #52525B;
   }
-  .tag-input-cancel:hover { background: rgba(243, 243, 249, 1); }
+  .tag-input-cancel:hover { background: #E4E4E7; }
   .tag-input-confirm {
-    background: var(--accent); color: #FFF;
-    box-shadow: 0 2px 8px rgba(24, 24, 27, 0.15);
+    background: #18181B; color: #FFF;
   }
   .tag-input-confirm:hover {
     background: #333;
-    box-shadow: 0 4px 12px rgba(24, 24, 27, 0.2);
   }
 
   /* Carousel dots */
@@ -1176,72 +1156,15 @@
 
   /* ===== NOTE DETAIL OVERLAY ===== */
   #overlay-note {
-    background: #FAFAFA;
-  }
-  .note-detail-topbar {
-    display: flex;
-    align-items: center;
-    min-height: 48pt;
-    padding: 10px 16px;
-    background: rgba(250, 250, 250, 0.9);
-    backdrop-filter: blur(40px);
-    -webkit-backdrop-filter: blur(40px);
-    border-bottom: 1px solid rgba(227, 226, 229, 0.6);
-    flex-shrink: 0;
-  }
-  .note-back-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: 20px;
     background: #FFF;
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    transition: all 0.2s;
-    flex-shrink: 0;
   }
-  .note-back-btn:hover {
-    transform: scale(1.05);
-  }
-  .note-back-btn:active {
-    transform: scale(0.95);
-  }
-  .note-back-btn span {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .note-back-btn span svg {
-    width: 20px;
-    height: 20px;
-    color: var(--text-primary);
-  }
-  .note-topbar-title {
-    flex: 1;
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text-primary);
-    text-align: center;
-    margin: 0 12px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .note-topbar-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-  }
+
   .note-save-btn {
     background: #18181B;
     color: #FFF;
     border: none;
     border-radius: 100px;
-    padding: 8px 16px;
+    padding: 10px 18px;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
@@ -1259,7 +1182,7 @@
     color: #FFF;
     border: none;
     border-radius: 100px;
-    padding: 8px 16px;
+    padding: 10px 18px;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
@@ -1268,153 +1191,260 @@
   }
   .note-next-btn:hover { background: #27272A; }
   .note-next-btn:active { transform: scale(0.95); }
-  .note-share-btn {
+  .note-share-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
     width: 36px;
     height: 36px;
-    border-radius: 18px;
-    background: #FFF;
-    border: none;
     display: flex;
     align-items: center;
     justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    transition: all 0.2s;
+    color: #18181B;
+    transition: opacity 0.2s;
   }
-  .note-share-btn:hover {
-    background: #F4F4F5;
-  }
-  .note-share-btn span {
+  .note-share-icon:hover { opacity: 0.6; }
+  .note-share-icon span { display: flex; align-items: center; justify-content: center; }
+  .note-share-icon span svg { width: 20px; height: 20px; }
+
+  /* Main Card Container - framer-a1mv7 */
+  .note-detail-wrapper {
+    background-color: #F0F0F0;
+    width: 100%;
+    border-radius: 20px;
+    margin: 0 0 16px;
     display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .note-share-btn span svg {
-    width: 18px;
-    height: 18px;
-    color: var(--text-primary);
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px;
   }
 
-  .note-section {
-    margin-bottom: 24px;
+  /* Image Section - framer-keeoik */
+  .note-card-carousel {
+    padding: 0;
+    overflow: hidden;
+    position: relative;
+    width: 100%;
   }
-  .ocr-actions {
-    margin-top: 12px;
+  .note-card-track {
     display: flex;
-    justify-content: flex-end;
+    gap: 0;
+    padding: 0;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    scroll-behavior: smooth;
   }
-  .ocr-retry-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(227, 226, 229, 0.6);
-    border-radius: 100px;
-    width: 36px;
-    height: 36px;
+  .note-card-track::-webkit-scrollbar {
+    display: none;
+  }
+  .note-card-item {
+    flex: 0 0 100%;
+    border-radius: 17px;
+    overflow: hidden;
+    background: #FFFFFF;
+    box-shadow: 0 0.602187px 0.602187px -0.916667px rgba(0,0,0,0.08),
+                0 2.28853px 2.28853px -1.83333px rgba(0,0,0,0.08),
+                0 10px 10px -2.75px rgba(0,0,0,0.07);
+    scroll-snap-align: center;
+    position: relative;
     cursor: pointer;
-    transition: all 0.2s;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    transition: transform 0.3s, box-shadow 0.3s, opacity 0.3s;
+    aspect-ratio: 2/3;
   }
-  .ocr-retry-btn:hover {
+  .note-card-item.active {
+    opacity: 1;
+  }
+  .note-card-item img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center center;
+    border-radius: inherit;
+  }
+  .note-card-item .card-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 28px;
+    height: 28px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #18181B;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  /* Content Card - framer-73aak2 */
+  .note-content-card {
+    background: #FFFFFF;
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 0.602187px 0.602187px -0.916667px rgba(0,0,0,0.08),
+                0 2.28853px 2.28853px -1.83333px rgba(0,0,0,0.08),
+                0 10px 10px -2.75px rgba(0,0,0,0.07);
+  }
+
+  /* Text Pill - folder name */
+  .nc-text-pill {
+    border: 1px dashed rgba(0,0,0,0.2);
+    border-radius: 25px;
+    padding: 6px 14px;
+    display: inline-flex;
+    align-items: center;
+    margin-bottom: 12px;
+    gap: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #4F4F4F;
+  }
+
+  /* Image Title */
+  .nc-heading-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #18181B;
+    margin-bottom: 12px;
+    line-height: 1.3;
+    outline: none;
+  }
+
+  /* OCR Section */
+  .nc-ocr-section {
+    margin-bottom: 16px;
+  }
+  .nc-ocr-text {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #52525B;
+    outline: none;
+    min-height: 60px;
+  }
+  .nc-ocr-text:empty:before {
+    content: attr(data-placeholder);
+    color: #C4C4C4;
+  }
+  .nc-ocr-retry {
+    margin-top: 8px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid rgba(0,0,0,0.12);
     background: #FFF;
-    border-color: rgba(227, 226, 229, 0.8);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s;
+    font-size: 13px;
+    font-weight: 500;
+    color: #52525B;
+    font-family: inherit;
+    vertical-align: middle;
   }
-  .ocr-retry-btn:active {
-    transform: scale(0.95);
-    background: rgba(243, 243, 249, 0.8);
+  .nc-ocr-retry:hover {
+    background: #F4F4F5;
+    border-color: rgba(0,0,0,0.2);
   }
-  .ocr-retry-btn span {
+  .nc-ocr-retry span {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    line-height: 1;
   }
-  .ocr-retry-btn span svg {
+
+  /* Bottom Section */
+  .nc-tags-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    align-items: center;
+  }
+  .nc-badges {
+    display: contents;
+  }
+  .nc-badge {
+    border-radius: 20px;
+    padding: 6px 12px 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: default;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .nc-badge-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: 16px;
     height: 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    transition: all 0.15s;
+    user-select: none;
+    opacity: 0.6;
   }
-  .note-section-title {
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin-bottom: 10px;
-    outline: none;
-    cursor: text;
-    padding: 4px 0;
+  .nc-badge-remove:hover {
+    opacity: 1;
   }
-  .note-section-title:empty:before {
-    content: attr(data-placeholder);
-    color: var(--text-quaternary);
+  .nc-badge-placeholder {
+    font-size: 13px;
+    font-weight: 500;
+    color: #A1A1AA;
+    padding: 6px 0;
   }
-  .note-section-title:focus {
-    background: rgba(244,244,245,0.5);
-    border-radius: 6px;
-    padding: 4px 8px;
-    margin: -4px -8px 10px;
-  }
-  .note-section-content {
-    font-size: 16px;
-    color: var(--text-secondary);
-    line-height: 1.7;
-    outline: none;
-    cursor: text;
-    padding: 4px 0;
-  }
-  .note-section-content:empty:before {
-    content: attr(data-placeholder);
-    color: var(--text-quaternary);
-  }
-  .note-section-content:focus {
-    background: rgba(244,244,245,0.5);
-    border-radius: 6px;
-    padding: 4px 8px;
-    margin: -4px -8px 0;
-  }
-
-  /* Note Image Carousel */
-  .note-carousel {
-    margin-bottom: 24px;
-    overflow: hidden;
-    background: #F4F4F5;
-    border-radius: 12px;
-  }
-  .note-carousel-track {
-    display: flex;
-    transition: transform 0.3s ease;
-  }
-  .note-carousel-slide {
-    min-width: 100%;
+  .nc-add-tag-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 15px;
+    font-weight: 500;
     cursor: pointer;
     display: flex;
-    justify-content: center;
     align-items: center;
-    padding: 16px;
+    justify-content: center;
+    transition: all 0.2s;
+    line-height: 1;
+    background: #F4F4F5;
+    color: #52525B;
+    border: none;
+    flex-shrink: 0;
   }
-  .note-carousel-slide img {
-    max-width: 100%;
-    max-height: 300px;
-    object-fit: contain;
-    display: block;
+  .nc-add-tag-btn:hover {
+    background: #E4E4E7;
   }
-  .note-carousel-dots {
+
+  /* Dots Indicator */
+  .note-card-dots {
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 6px;
     padding: 12px 0;
   }
-  .note-carousel-dot {
+  .note-card-dot {
     width: 6px;
     height: 6px;
     border-radius: 3px;
-    background: #D4D4D8;
+    background: #A1A1AA;
     cursor: pointer;
     transition: all 0.3s;
   }
-  .note-carousel-dot.active {
-    width: 18px;
+  .note-card-dot.active {
+    width: 20px;
     background: #18181B;
+  }
+
+  .note-section {
+    margin-bottom: 24px;
   }
 
   /* ===== ANIMATIONS ===== */
@@ -1511,21 +1541,45 @@
 
   <!-- ===== OVERLAY: Note Detail ===== -->
   <div class="overlay" id="overlay-note">
-    <div class="note-detail-topbar">
-      <button class="note-back-btn" onclick="closeOverlay('overlay-note')">
-        <span data-icon="arrowLeft"></span>
+    <div class="overlay-topbar">
+      <button class="back" onclick="closeOverlay('overlay-note')">
+        <span data-icon="arrowLeft" style="margin-right:4px"></span>返回
       </button>
-      <div class="note-topbar-title" id="noteTopbarTitle">笔记标题</div>
-      <div class="note-topbar-actions">
+      <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
         <button class="note-next-btn" id="noteNextBtn" onclick="goNextImage()">下一张</button>
         <button class="note-save-btn" id="noteSaveBtn" style="display:none" onclick="openSaveModal()">保存</button>
-        <button class="note-share-btn" onclick="alert('分享功能开发中...')">
+        <button class="note-share-icon" onclick="alert('分享功能开发中...')">
           <span data-icon="share"></span>
         </button>
       </div>
     </div>
     <div class="overlay-scroll">
-      <div class="note-content" id="noteEditor"></div>
+      <div class="note-detail-wrapper">
+        <!-- Image Carousel -->
+        <div class="note-card-carousel" id="noteCarousel">
+          <div class="note-card-track" id="noteCardTrack"></div>
+        </div>
+        <!-- Content Card - Framer style -->
+        <div class="note-content-card" id="noteContentCard">
+          <div class="nc-text-pill">
+            <span data-icon="folderSm" style="width:14px;height:14px;display:inline-flex;align-items:center;margin-right:4px"></span>
+            <span id="ncFolderName">Folder</span>
+          </div>
+          <h3 class="nc-heading-title" id="ncImageTitle" contenteditable="true">Image title</h3>
+          <div class="nc-ocr-section">
+            <p class="nc-ocr-text" id="ncOcrText" contenteditable="true">OCR text content...</p>
+            <button class="nc-ocr-retry" id="ncOcrRetry" onclick="retryOcr(currentImageIndex)">
+              <span data-icon="refresh"></span>重新识别
+            </button>
+          </div>
+          <div class="nc-tags-row">
+            <div class="nc-badges" id="ncBadges"></div>
+            <button class="nc-add-tag-btn" id="ncAddTagBtn" onclick="addTag()">+</button>
+          </div>
+        </div>
+      </div>
+      <!-- Dots Indicator -->
+      <div class="note-card-dots" id="noteCardDots"></div>
     </div>
   </div>
 
@@ -1606,6 +1660,7 @@ const icons = {
   notes: '<svg class="icon-svg" width="22" height="22" viewBox="0 0 48 48" fill="none"><path d="M10 6H30L38 14V42C38 43.1 37.1 44 36 44H10C8.9 44 8 43.1 8 42V8C8 6.9 8.9 6 10 6Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M16 24H30" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><path d="M16 30H30" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><path d="M16 36H24" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><path d="M28 6V14H38" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/></svg>',
   camera: '<svg class="icon-svg" width="26" height="26" viewBox="0 0 48 48" fill="none"><path d="M16 10L19 6H29L32 10H40C41.1 10 42 10.9 42 12V38C42 39.1 41.1 40 40 40H8C6.9 40 6 39.1 6 38V12C6 10.9 6.9 10 8 10H16Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><circle cx="24" cy="26" r="8" stroke="currentColor" stroke-width="4"/></svg>',
   folder: '<svg class="icon-svg" width="22" height="22" viewBox="0 0 48 48" fill="none"><path d="M5 10C5 8.89543 5.89543 8 7 8L19 8L23 14H41C42.1046 14 43 14.8954 43 16V40C43 41.1046 42.1046 42 41 42H7C5.89543 42 5 41.1046 5 40V10Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/></svg>',
+  folderSm: '<svg class="icon-svg" width="14" height="14" viewBox="0 0 48 48" fill="none"><path d="M5 10C5 8.89543 5.89543 8 7 8L19 8L23 14H41C42.1046 14 43 14.8954 43 16V40C43 41.1046 42.1046 42 41 42H7C5.89543 42 5 41.1046 5 40V10Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/></svg>',
   plus: '<svg class="icon-svg" width="22" height="22" viewBox="0 0 48 48" fill="none"><path d="M24 8V40" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><path d="M8 24H40" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>',
   arrowRight: '<svg class="icon-svg" width="20" height="20" viewBox="0 0 48 48" fill="none"><path d="M10 24H38" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><path d="M26 14L38 24L26 34" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   arrowLeft: '<svg class="icon-svg" width="16" height="16" viewBox="0 0 48 48" fill="none"><path d="M38 24H10" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><path d="M22 14L10 24L22 34" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -1818,6 +1873,7 @@ var isProcessingNewImport = false;
       tags: JSON.stringify(Array.from(tagSet)),
       imageCount: imgs.length,
       imageUrls: imgs.map(img => img.imgSrc || img.fileDataUrl || '').filter(Boolean),
+      imageOcrTexts: imgs.map(img => img.ocr || ''),
       imageNotes: imgs.map(() => ''),
       imageTags: imgs.map(() => []),
       notesText: '',
@@ -2076,7 +2132,7 @@ function openProjectNotes(projectId) {
       var moreCount = tagList.length - 3;
       var plainText = n.notesText || '';
 
-      return '<div class="project-note-card" onclick="closeOverlay(\'overlay-project-notes\');openNoteDetail(' + n.projectId + ')">' +
+      return '<div class="project-note-card" onclick="openNoteDetail(' + n.projectId + ');closeOverlay(\'overlay-project-notes\')">' +
         '<div class="pnc-stack">' + stackHtml + '</div>' +
         '<div class="pnc-txt">' +
           '<div class="pnc-title">' + (n.title || n.projectTitle || '无标题') + '</div>' +
@@ -2152,27 +2208,26 @@ function openNoteDetail(projectId, isNewImport) {
   isProcessingNewImport = !!isNewImport;
   var note = allNotes.find(function(n) { return n.projectId === projectId; });
 
-  var editor = document.getElementById('noteEditor');
-  var topbarTitle = document.getElementById('noteTopbarTitle');
   var nextBtn = document.getElementById('noteNextBtn');
   var saveBtn = document.getElementById('noteSaveBtn');
 
   if (note) {
-    topbarTitle.textContent = note.title || note.projectTitle || '新笔记';
     if (nextBtn) nextBtn.style.display = 'inline-block';
     if (saveBtn) saveBtn.style.display = 'none';
     renderCurrentImage(note);
   } else {
-    topbarTitle.textContent = '新笔记';
-    editor.innerHTML = '<div class="note-empty" style="color:#AAA;text-align:center;margin-top:60px">点击工具栏开始编辑</div>';
+    document.getElementById('noteCardTrack').innerHTML = '';
+    document.getElementById('noteCardDots').innerHTML = '';
+    document.getElementById('ncFolderName').textContent = '---';
+    document.getElementById('ncImageTitle').textContent = 'New Note';
+    document.getElementById('ncOcrText').textContent = 'Start editing your note...';
+    document.getElementById('ncBadges').innerHTML = '<div class="nc-badge-placeholder">No tags</div>';
   }
 
   document.getElementById('overlay-note').classList.add('open');
 }
 
 function renderCurrentImage(note) {
-  var editor = document.getElementById('noteEditor');
-  var topbarTitle = document.getElementById('noteTopbarTitle');
   var nextBtn = document.getElementById('noteNextBtn');
   var saveBtn = document.getElementById('noteSaveBtn');
   var imgUrls = note.imageUrls || [];
@@ -2186,10 +2241,14 @@ function renderCurrentImage(note) {
   } else if (i >= total) {
     if (nextBtn) nextBtn.style.display = 'none';
     if (saveBtn) saveBtn.style.display = 'inline-block';
-    editor.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--text-tertiary)">'
-      + '<div style="font-size:48px;margin-bottom:16px">&#10003;</div>'
-      + '<div style="font-size:16px;font-weight:600;color:var(--text-primary);margin-bottom:8px">全部识别完成</div>'
-      + '<div style="font-size:13px">共处理 ' + total + ' 张截图</div></div>';
+    document.getElementById('noteCardTrack').innerHTML = '';
+    document.getElementById('noteCardDots').innerHTML = '';
+    document.getElementById('ncFolderName').textContent = '---';
+    document.getElementById('ncImageTitle').textContent = 'All Done!';
+    document.getElementById('ncOcrText').innerHTML = '<div style="display:flex;align-items:center;gap:8px"><span style="font-size:20px">&#10003;</span> Processed ' + total + ' screenshots</div>';
+    var retryBtn = document.getElementById('ncOcrRetry');
+    if (retryBtn) retryBtn.style.display = 'none';
+    document.getElementById('ncBadges').innerHTML = '';
     return;
   } else {
     if (i >= total - 1) {
@@ -2204,91 +2263,274 @@ function renderCurrentImage(note) {
     }
   }
 
-  var url = imgUrls[i];
-  var title = note.title || note.projectTitle || '';
-  var html = '';
-  editor.innerHTML = html;
-
-  // Card container
-  html += '<div class="nd-card">';
-
-  // Image
-  html += '<div class="nd-image">';
-  html += '<img src="' + url + '" />';
-  html += '</div>';
-
-  // Body with title and OCR
-  html += '<div class="nd-body">';
-
-  // Title
-  html += '<div class="nd-title" contenteditable="true" data-placeholder="输入标题..." onblur="saveNoteTitle(this.textContent)">' + title + '</div>';
-
-  // OCR Status
-  if (isProcessingNewImport) {
-    html += '<div class="note-img-ocr-status" id="noteOcrStatus0">';
-    html += '<div class="ocr-spinner-sm"></div><span>识别中...</span>';
-    html += '</div>';
-  }
-
-  // OCR Text
-  var ocrText = ocrTexts[i] || '';
-  html += '<div class="nd-text" contenteditable="true" id="noteOcrText0" onblur="saveOcrText(' + i + ', this.textContent)" data-placeholder="识别结果...">' + (isProcessingNewImport ? '' : ocrText) + '</div>';
-
-  // Retry button
-  html += '<div class="ocr-actions" id="ocrActions0" style="' + (isProcessingNewImport ? 'display:none' : '') + '">';
-  html += '<button class="ocr-retry-btn" onclick="retryOcr(' + i + ')">';
-  html += '<span data-icon="refresh"></span>';
-  html += '</button>';
-  html += '</div>';
-
-  html += '</div>';
-
-  // Tags section
-  var tags = (note.imageTags && note.imageTags[i]) || [];
-  html += '<div class="note-tags-block">';
-  html += '<div class="note-tags-label">标签</div>';
-  html += '<div class="nd-tags" data-img="' + i + '">';
-  tags.forEach(function(tag, ti) {
-    html += '<div class="nd-tag">' + tag + '<span class="tag-close" onclick="removeTag(' + i + ', ' + ti + ')">×</span></div>';
+  // Render card carousel
+  var trackHtml = '';
+  imgUrls.forEach(function(url, idx) {
+    var isActive = idx === i;
+    trackHtml += '<div class="note-card-item' + (isActive ? ' active' : '') + '" data-index="' + idx + '">';
+    trackHtml += '<img src="' + url + '" />';
+    trackHtml += '<div class="card-badge">' + (idx + 1) + '</div>';
+    trackHtml += '</div>';
   });
-  html += '<div class="nd-add-tag" onclick="openTagInput(' + i + ')">';
-  html += '<span data-icon="plus" class="add-icon"></span>添加标签';
-  html += '</div>';
-  html += '</div>';
-  html += '</div>';
+  document.getElementById('noteCardTrack').innerHTML = trackHtml;
 
-  html += '</div>';
+  // Render dots
+  var dotsHtml = '';
+  imgUrls.forEach(function(_, idx) {
+    dotsHtml += '<div class="note-card-dot' + (idx === i ? ' active' : '') + '" data-index="' + idx + '" onclick="scrollToCard(' + idx + ')"></div>';
+  });
+  document.getElementById('noteCardDots').innerHTML = dotsHtml;
 
-  editor.innerHTML = html;
+
+  // Scroll to current card
+  setTimeout(function() {
+    scrollToCard(i, false);
+  }, 50);
+
+  // Render text content for current image
+  renderTextContent(note, i);
 
   if (isProcessingNewImport) {
-    runTesseractOcr(url, 0);
+    runTesseractOcr(imgUrls[i], i);
   }
 }
+
+function renderTextContent(note, idx) {
+  var folderName = note.projectTitle || note.title || 'Folder';
+  var ocrTexts = note.imageOcrTexts || [];
+  var textBlocks = note.textBlocks || [];
+  var title = note.title || note.projectTitle || '';
+  var tags = note.tags || [];
+
+  // Folder name in pill
+  document.getElementById('ncFolderName').textContent = folderName;
+
+  // Image title
+  document.getElementById('ncImageTitle').textContent = title || 'New Note';
+
+  // OCR text with retry button
+  var ocrText = ocrTexts[idx] || '';
+  var ocrEl = document.getElementById('ncOcrText');
+  var retryBtn = document.getElementById('ncOcrRetry');
+  if (isProcessingNewImport && !ocrText) {
+    ocrEl.innerHTML = '<span class="ocr-loading">Processing OCR...</span>';
+    if (retryBtn) retryBtn.style.display = 'none';
+  } else {
+    ocrEl.textContent = ocrText || '';
+    ocrEl.setAttribute('data-placeholder', 'No text extracted. Click the button to retry.');
+    if (retryBtn) retryBtn.style.display = 'flex';
+  }
+
+  // Tags
+  var badgesHtml = '';
+  var tagList = [];
+  if (typeof tags === 'string') {
+    try { tagList = JSON.parse(tags); } catch(e) { tagList = tags.split(',').map(function(t) { return t.trim(); }).filter(function(t) { return t; }); }
+  } else if (Array.isArray(tags)) {
+    tagList = tags;
+  }
+  if (tagList.length > 0) {
+    tagList.forEach(function(tag, tIdx) {
+      var colors = getTagColors(tag);
+      badgesHtml += '<div class="nc-badge" style="background:' + colors.bg + ';color:' + colors.text + '"><span>' + tag + '</span><span class="nc-badge-remove" data-index="' + tIdx + '" style="color:' + colors.text + '">×</span></div>';
+    });
+  } else {
+    badgesHtml = '<div class="nc-badge-placeholder">No tags</div>';
+  }
+  document.getElementById('ncBadges').innerHTML = badgesHtml;
+}
+
+// Tag color palette
+var tagColorPalette = [
+  { bg: '#FDECD6', text: '#C57C00' },  // orange
+  { bg: '#D6EAFF', text: '#1A73E8' },  // blue
+  { bg: '#E4D6F5', text: '#7C4DFF' },  // purple
+  { bg: '#F5EED6', text: '#8B6914' },  // beige
+  { bg: '#D6F5E8', text: '#0A7A3E' },  // green
+  { bg: '#F5D6D6', text: '#D32F2F' },  // pink
+  { bg: '#E4E4E7', text: '#52525B' },  // gray
+  { bg: '#FFF3CD', text: '#856404' },  // yellow
+];
+
+function getTagColors(tag) {
+  var hash = 0;
+  for (var i = 0; i < tag.length; i++) {
+    hash = ((hash << 5) - hash) + tag.charCodeAt(i);
+    hash |= 0;
+  }
+  return tagColorPalette[Math.abs(hash) % tagColorPalette.length];
+}
+
+// Delegate click on ncBadges for remove buttons
+document.getElementById('ncBadges').addEventListener('click', function(e) {
+  var target = e.target;
+  if (!target.classList.contains('nc-badge-remove')) return;
+  var idx = parseInt(target.getAttribute('data-index'), 10);
+  if (isNaN(idx)) return;
+  var note = allNotes.find(function(n) { return n.projectId === currentProjectId; });
+  if (!note) return;
+  var raw = note.tags || '';
+  var tagList = [];
+  try { tagList = JSON.parse(raw); } catch(e) { tagList = raw.split(',').map(function(t) { return t.trim(); }).filter(function(t) { return t; }); }
+  if (idx >= 0 && idx < tagList.length) {
+    tagList.splice(idx, 1);
+    note.tags = JSON.stringify(tagList);
+    renderTextContent(note, currentImageIndex);
+  }
+});
+
+function addTag() {
+  addTagTargetIndex = -1;
+  openTagInput(-1);
+}
+
+function scrollToCard(idx, animate) {
+  var track = document.getElementById('noteCardTrack');
+  var cards = track.querySelectorAll('.note-card-item');
+  if (!cards[idx]) return;
+
+  var card = cards[idx];
+  var trackWidth = track.offsetWidth;
+  var cardLeft = card.offsetLeft;
+  var cardWidth = card.offsetWidth;
+  var scrollTarget = cardLeft - (trackWidth - cardWidth) / 2;
+
+  if (animate !== false) {
+    track.scrollTo({ left: scrollTarget, behavior: 'smooth' });
+  } else {
+    track.scrollLeft = scrollTarget;
+  }
+
+  // Update active card style
+  cards.forEach(function(c, i) {
+    c.classList.toggle('active', i === idx);
+  });
+
+  // Update dots
+  var dots = document.querySelectorAll('.note-card-dot');
+  dots.forEach(function(dot, i) {
+    dot.classList.toggle('active', i === idx);
+  });
+
+  // Update text content
+  var note = allNotes.find(function(n) { return n.projectId === currentProjectId; });
+  if (note) {
+    renderTextContent(note, idx);
+  }
+
+  currentImageIndex = idx;
+
+  // Update save/next buttons
+  if (note) {
+    var total = (note.imageUrls || []).length;
+    var nextBtn = document.getElementById('noteNextBtn');
+    var saveBtn = document.getElementById('noteSaveBtn');
+    if (total <= 1) {
+      if (nextBtn) nextBtn.style.display = 'none';
+      if (saveBtn) saveBtn.style.display = 'inline-block';
+    } else if (idx >= total - 1) {
+      if (nextBtn) nextBtn.style.display = 'none';
+      if (saveBtn) saveBtn.style.display = 'inline-block';
+    } else {
+      if (nextBtn) {
+        nextBtn.style.display = 'inline-block';
+        nextBtn.textContent = '下一张（' + (idx + 1) + '/' + total + '）';
+      }
+      if (saveBtn) saveBtn.style.display = 'none';
+    }
+  }
+}
+
+// Handle scroll to update active card and text
+document.addEventListener('DOMContentLoaded', function() {
+  var track = document.getElementById('noteCardTrack');
+  if (track) {
+    var scrollTimer = null;
+    track.addEventListener('scroll', function() {
+      if (scrollTimer) clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(function() {
+        var cards = track.querySelectorAll('.note-card-item');
+        var trackWidth = track.offsetWidth;
+        var scrollLeft = track.scrollLeft;
+        var center = scrollLeft + trackWidth / 2;
+        var closest = 0;
+        var minDist = Infinity;
+        cards.forEach(function(card, idx) {
+          var cardCenter = card.offsetLeft + card.offsetWidth / 2;
+          var dist = Math.abs(cardCenter - center);
+          if (dist < minDist) {
+            minDist = dist;
+            closest = idx;
+          }
+        });
+        if (closest !== currentImageIndex) {
+          // Update active card style
+          cards.forEach(function(c, i) {
+            c.classList.toggle('active', i === closest);
+          });
+
+          var dots = document.querySelectorAll('.note-card-dot');
+          dots.forEach(function(dot, i) {
+            dot.classList.toggle('active', i === closest);
+          });
+          currentImageIndex = closest;
+
+          // Update text content
+          var note = allNotes.find(function(n) { return n.projectId === currentProjectId; });
+          if (note) {
+            renderTextContent(note, closest);
+
+            var total = (note.imageUrls || []).length;
+            var nextBtn = document.getElementById('noteNextBtn');
+            var saveBtn = document.getElementById('noteSaveBtn');
+            if (total <= 1) {
+              if (nextBtn) nextBtn.style.display = 'none';
+              if (saveBtn) saveBtn.style.display = 'inline-block';
+            } else if (closest >= total - 1) {
+              if (nextBtn) nextBtn.style.display = 'none';
+              if (saveBtn) saveBtn.style.display = 'inline-block';
+            } else {
+              if (nextBtn) {
+                nextBtn.style.display = 'inline-block';
+                nextBtn.textContent = '下一张（' + (closest + 1) + '/' + total + '）';
+              }
+              if (saveBtn) saveBtn.style.display = 'none';
+            }
+          }
+        }
+      }, 100);
+    });
+  }
+});
 
 function goNextImage() {
   var note = allNotes.find(function(n) { return n.projectId === currentProjectId; });
   if (!note) return;
-  saveOcrText(currentImageIndex, document.getElementById('noteOcrText0') ? document.getElementById('noteOcrText0').textContent : '');
   currentImageIndex++;
   renderCurrentImage(note);
+  scrollToCard(currentImageIndex);
 }
 
 function toggleNoteOcr() {}
 
 function saveOcrText(index, text) {
   var note = allNotes.find(function(n) { return n.projectId === currentProjectId; });
-  if (note && note.imageOcrTexts) {
-    note.imageOcrTexts[index] = text.trim();
-  }
+  if (!note) return;
+  if (!note.imageOcrTexts) note.imageOcrTexts = [];
+  note.imageOcrTexts[index] = text.trim();
 }
 
 function retryOcr(index) {
   var note = allNotes.find(function(n) { return n.projectId === currentProjectId; });
   if (!note) return;
-  saveOcrText(index, document.getElementById('noteOcrText0') ? document.getElementById('noteOcrText0').textContent : '');
+  if (!note.imageOcrTexts) note.imageOcrTexts = [];
+  var ocrEl = document.getElementById('ncOcrText');
+  saveOcrText(index, ocrEl ? ocrEl.textContent : '');
+  note.imageOcrTexts[index] = '';
   isProcessingNewImport = true;
-  renderCurrentImage(note);
+  var imgUrls = note.imageUrls || [];
+  renderTextContent(note, index);
+  runTesseractOcr(imgUrls[index], index);
 }
 
 // ===================== SAVE MODAL =====================
@@ -2477,56 +2719,54 @@ function selectSaveProjectById(id) {
 }
 
 function runTesseractOcr(imageUrl, index) {
-  var statusEl = document.getElementById('noteOcrStatus' + index);
-  var textEl = document.getElementById('noteOcrText' + index);
-  var actionsEl = document.getElementById('ocrActions' + index);
-  if (!statusEl || !textEl) {
+  var ocrEl = document.getElementById('ncOcrText');
+  var retryBtn = document.getElementById('ncOcrRetry');
+  if (!ocrEl) {
     isProcessingNewImport = false;
-    if (actionsEl) actionsEl.style.display = 'flex';
     return;
   }
 
-  var done = false;
+  if (retryBtn) retryBtn.style.display = 'none';
+  ocrEl.innerHTML = '<span class="ocr-loading">Processing OCR...</span>';
 
-  function onComplete() {
-    if (actionsEl) actionsEl.style.display = 'flex';
-  }
+  var timedOut = false;
 
   setTimeout(function() {
-    if (!done) {
-      done = true;
-      textEl.textContent = '（识别超时，请重试）';
-      statusEl.style.display = 'none';
+    if (!timedOut) {
+      timedOut = true;
+      ocrEl.textContent = '（Recognition timeout, please retry）';
       isProcessingNewImport = false;
-      onComplete();
+      if (retryBtn) retryBtn.style.display = 'flex';
     }
   }, 30000);
 
   Tesseract.recognize(imageUrl, 'eng', {
     logger: function(m) {
-      if (!done && m.status === 'recognizing text' && statusEl) {
+      if (timedOut) return;
+      if (m.status === 'recognizing text') {
         var pct = Math.round(m.progress * 100);
-        statusEl.innerHTML = '<div class="ocr-spinner-sm"></div><span>识别中... ' + pct + '%</span>';
-      }
-      if (!done && m.status === 'loading language traineddata' && statusEl) {
-        statusEl.innerHTML = '<div class="ocr-spinner-sm"></div><span>加载语言模型...</span>';
+        ocrEl.innerHTML = '<span class="ocr-loading">Recognizing... ' + pct + '%</span>';
       }
     }
   }).then(function(result) {
-    if (done) return;
-    done = true;
-    var text = result.data.text.trim();
-    textEl.textContent = text || '（未识别到文字）';
-    statusEl.style.display = 'none';
+    if (timedOut) return;
+    timedOut = true;
+    var text = result.data.text;
+    ocrEl.textContent = text || '（No text detected）';
     isProcessingNewImport = false;
-    onComplete();
+    if (retryBtn) retryBtn.style.display = 'flex';
+
+    var note = allNotes.find(function(n) { return n.projectId === currentProjectId; });
+    if (note) {
+      if (!note.imageOcrTexts) note.imageOcrTexts = [];
+      note.imageOcrTexts[index] = text.trim();
+    }
   }).catch(function(err) {
-    if (done) return;
-    done = true;
-    textEl.textContent = '（识别失败: ' + (err.message || err) + '）';
-    statusEl.style.display = 'none';
+    if (timedOut) return;
+    timedOut = true;
+    ocrEl.textContent = '（OCR failed: ' + (err.message || 'unknown error') + '）';
     isProcessingNewImport = false;
-    onComplete();
+    if (retryBtn) retryBtn.style.display = 'flex';
   });
 }
 
@@ -2573,7 +2813,6 @@ function saveNoteTitle(text) {
   const note = allNotes.find(n => n.projectId === currentProjectId);
   if (note) {
     note.title = text.trim();
-    document.getElementById('noteTopbarTitle').textContent = text.trim() || '笔记';
   }
 }
 
@@ -2656,18 +2895,14 @@ function confirmTagInput() {
       tagsContainer.insertBefore(span, addBtn);
     }
   } else {
-    const currentTags = (() => { try { return JSON.parse(note.tags); } catch { return []; } })();
-    currentTags.push(tag);
-    note.tags = JSON.stringify(currentTags);
-
-    const noteTagList = document.getElementById('noteTagList');
-    if (noteTagList) {
-      const c = tagColor(tag);
-      const span = document.createElement('span');
-      span.className = 'nd-tag';
-      span.style.cssText = `background:${c.bg};color:${c.text}`;
-      span.textContent = tag;
-      noteTagList.appendChild(span);
+    // Add to note card
+    var raw = note.tags || '';
+    var tagList = [];
+    try { tagList = JSON.parse(raw); } catch(e) { tagList = raw.split(',').map(function(t) { return t.trim(); }).filter(function(t) { return t; }); }
+    if (tagList.indexOf(tag) === -1) {
+      tagList.push(tag);
+      note.tags = JSON.stringify(tagList);
+      renderTextContent(note, currentImageIndex);
     }
   }
 

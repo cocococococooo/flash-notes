@@ -153,6 +153,15 @@ export default function IconPark({ name, size = 24, color = "#18181B" }: IconPro
           <Path d="M36 12L12 36" stroke={color} strokeWidth="4" strokeLinecap="round" />
         </Svg>
       );
+    case "refresh":
+      return (
+        <Svg width={size} height={size} viewBox="0 0 48 48" fill="none">
+          <Path d="M8 24C8 15.1634 15.1634 8 24 8C29.2907 8 33.9575 10.4571 37 14.1964" stroke={color} strokeWidth="4" strokeLinecap="round" />
+          <Path d="M40 24C40 32.8366 32.8366 40 24 40C18.7093 40 14.0425 37.5429 11 33.8036" stroke={color} strokeWidth="4" strokeLinecap="round" />
+          <Path d="M37 6V14H29" stroke={color} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+          <Path d="M11 42V34H19" stroke={color} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+        </Svg>
+      );
     default:
       return null;
   }

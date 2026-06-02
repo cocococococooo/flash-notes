@@ -13,7 +13,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Dimensions,
-  FlatList,
+  Animated,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { api } from "../../services/api";
@@ -21,6 +21,10 @@ import IconPark from "../../components/IconPark";
 import { API_BASE_URL } from "../../constants/config";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const WRAPPER_PADDING = 12;
+const CARD_WIDTH = SCREEN_WIDTH - WRAPPER_PADDING * 2;
+const CARD_HEIGHT = CARD_WIDTH * 1.4;
+const CARD_SPACING = 12;
 
 interface Note {
   id: number;
@@ -92,7 +96,33 @@ export default function NoteScreen() {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [noteTitle, setNoteTitle] = useState("");
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [tagModalVisible, setTagModalVisible] = useState(false);
+  const [tagInputValue, setTagInputValue] = useState("");
+  const tagSlideAnim = useRef(new Animated.Value(300)).current;
+
+  useEffect(() => {
+    if (tagModalVisible) {
+      tagSlideAnim.setValue(300);
+      Animated.spring(tagSlideAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        damping: 20,
+        stiffness: 200,
+      }).start();
+    }
+  }, [tagModalVisible, tagSlideAnim]);
   const scrollViewRef = useRef<ScrollView>(null);
+  const carouselRef = useRef<Animated.FlatList<Block>>(null);
+  const scrollX = useRef(new Animated.Value(0)).current;
+
+  const goToImage = (index: number) => {
+    if (index < 0 || index >= imageBlocks.length) return;
+    carouselRef.current?.scrollToOffset({
+      offset: index * (CARD_WIDTH + CARD_SPACING),
+      animated: true,
+    });
+    setCurrentImageIndex(index);
+  };
 
   const loadNote = useCallback(async () => {
     try {
@@ -113,6 +143,57 @@ export default function NoteScreen() {
   useEffect(() => {
     loadNote();
   }, [loadNote]);
+
+  const tagColorPalette = [
+    { bg: '#FDECD6', text: '#C57C00' },  // orange
+    { bg: '#D6EAFF', text: '#1A73E8' },  // blue
+    { bg: '#E4D6F5', text: '#7C4DFF' },  // purple
+    { bg: '#F5EED6', text: '#8B6914' },  // beige
+    { bg: '#D6F5E8', text: '#0A7A3E' },  // green
+    { bg: '#F5D6D6', text: '#D32F2F' },  // pink
+    { bg: '#E4E4E7', text: '#52525B' },  // gray
+    { bg: '#FFF3CD', text: '#856404' },  // yellow
+  ];
+
+  const getTagColors = (tag: string) => {
+    let hash = 0;
+    for (let i = 0; i < tag.length; i++) {
+      hash = ((hash << 5) - hash) + tag.charCodeAt(i);
+      hash |= 0;
+    }
+    return tagColorPalette[Math.abs(hash) % tagColorPalette.length];
+  };
+
+  const handleAddTag = () => {
+    setTagInputValue("");
+    setTagModalVisible(true);
+  };
+
+  const confirmTag = () => {
+    const tag = tagInputValue.trim();
+    if (!tag || !note) return;
+    const raw = note.tags || '';
+    let tagList: string[] = [];
+    try { tagList = JSON.parse(raw); } catch { tagList = raw.split(',').map(t => t.trim()).filter(Boolean); }
+    if (tagList.indexOf(tag) === -1) {
+      tagList.push(tag);
+      setNote({ ...note, tags: JSON.stringify(tagList) });
+    }
+    setTagModalVisible(false);
+    setTagInputValue("");
+  };
+
+  const removeTag = (tag: string) => {
+    if (!note) return;
+    const raw = note.tags || '';
+    let tagList: string[] = [];
+    try { tagList = JSON.parse(raw); } catch { tagList = raw.split(',').map(t => t.trim()).filter(Boolean); }
+    const idx = tagList.indexOf(tag);
+    if (idx !== -1) {
+      tagList.splice(idx, 1);
+      setNote({ ...note, tags: JSON.stringify(tagList) });
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -141,6 +222,51 @@ export default function NoteScreen() {
   const imageBlocks = blocks.filter(b => b.type === "image" && b.src);
   const textBlocks = blocks.filter(b => b.type !== "image");
 
+  const renderImageCard = ({ item, index }: { item: Block; index: number }) => {
+    const inputRange = [
+      (index - 1) * (CARD_WIDTH + CARD_SPACING),
+      index * (CARD_WIDTH + CARD_SPACING),
+      (index + 1) * (CARD_WIDTH + CARD_SPACING),
+    ];
+
+    const scale = scrollX.interpolate({
+      inputRange,
+      outputRange: [0.85, 1, 0.85],
+      extrapolate: "clamp",
+    });
+
+    const opacity = scrollX.interpolate({
+      inputRange,
+      outputRange: [0.4, 1, 0.4],
+      extrapolate: "clamp",
+    });
+
+    return (
+      <Animated.View
+        style={[
+          styles.cardWrapper,
+          {
+            width: CARD_WIDTH,
+            transform: [{ scale }],
+            opacity,
+          },
+        ]}
+      >
+        <TouchableOpacity
+          activeOpacity={0.95}
+          onPress={() => setPreviewImage(item.src!)}
+          style={styles.card}
+        >
+          <Image source={{ uri: item.src }} style={styles.cardImage} />
+          <View style={styles.cardOverlay} />
+          <View style={styles.cardBadge}>
+            <Text style={styles.cardBadgeText}>{index + 1}</Text>
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  };
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -160,12 +286,9 @@ export default function NoteScreen() {
           style={styles.backBtn} 
           onPress={() => router.back()}
         >
-          <IconPark name="arrowLeft" size={20} color="#18181B" />
+          <IconPark name="arrowLeft" size={18} color="#18181B" />
+          <Text style={styles.backBtnText}>返回</Text>
         </TouchableOpacity>
-        
-        <Text style={styles.topBarTitle} numberOfLines={1}>
-          {noteTitle}
-        </Text>
         
         <View style={styles.topBarActions}>
           <TouchableOpacity 
@@ -177,87 +300,172 @@ export default function NoteScreen() {
               {saving ? "保存中..." : "保存"}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
-            <IconPark name="share" size={18} color="#18181B" />
-          </TouchableOpacity>
+          {!saving && (
+            <TouchableOpacity style={styles.shareIconBtn} onPress={handleShare}>
+              <IconPark name="share" size={20} color="#18181B" />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
-      {/* Image Carousel */}
-      {imageBlocks.length > 0 && (
-        <View style={styles.carouselContainer}>
-          <FlatList
-            data={imageBlocks}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onMomentumScrollEnd={(e) => {
-              const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
-              setCurrentImageIndex(index);
-            }}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                activeOpacity={0.9}
-                onPress={() => setPreviewImage(item.src!)}
-              >
-                <Image source={{ uri: item.src }} style={styles.carouselImage} />
-              </TouchableOpacity>
-            )}
-            keyExtractor={(item, index) => `image-${index}`}
-          />
-          {/* Dots Indicator */}
-          <View style={styles.dotsContainer}>
-            {imageBlocks.map((_, index) => (
-              <View
-                key={index}
-                style={[styles.dot, index === currentImageIndex && styles.dotActive]}
-              />
-            ))}
-          </View>
-        </View>
-      )}
-
-      {/* Text Content Area */}
       <ScrollView 
         ref={scrollViewRef}
         style={styles.scrollView}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={styles.scrollContent}
         keyboardDismissMode="interactive"
+        showsVerticalScrollIndicator={false}
       >
-        {textBlocks.length === 0 && imageBlocks.length === 0 && (
-          <Text style={styles.empty}>开始编辑笔记内容</Text>
-        )}
-        
-        {textBlocks.map((block, i) => {
-          const textStyle =
-            block.type === "title"
-              ? styles.titleText
-              : block.type === "subtitle"
-              ? styles.subtitleText
-              : block.type === "heading"
-              ? styles.headingText
-              : block.type === "listItem"
-              ? styles.listItemText
-              : styles.paragraphText;
+        {/* Main Card Container */}
+        <View style={styles.mainCard}>
+          {/* Image Carousel Section */}
+          {imageBlocks.length > 0 && (
+            <View style={styles.carouselSection}>
+              <View style={styles.carouselContainer}>
+                <Animated.FlatList
+                  ref={carouselRef}
+                  data={imageBlocks}
+                  horizontal
+                  pagingEnabled={false}
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.carouselContent}
+                  snapToInterval={CARD_WIDTH + CARD_SPACING}
+                  decelerationRate="fast"
+                  onScroll={Animated.event(
+                    [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+                    { useNativeDriver: true }
+                  )}
+                  onMomentumScrollEnd={(e) => {
+                    const index = Math.round(
+                      e.nativeEvent.contentOffset.x / (CARD_WIDTH + CARD_SPACING)
+                    );
+                    if (index !== currentImageIndex && index >= 0 && index < imageBlocks.length) {
+                      setCurrentImageIndex(index);
+                    }
+                  }}
+                  renderItem={renderImageCard}
+                  keyExtractor={(item, index) => `image-${index}`}
+                />
+              </View>
+            </View>
+          )}
 
-          return (
-            <TextInput
-              key={i}
-              style={textStyle}
-              value={block.text}
-              onChangeText={(val) => updateBlockText(blocks.indexOf(block), val)}
-              multiline
-              placeholder={
-                block.type === "title"
-                  ? "输入标题..."
-                  : block.type === "subtitle"
-                  ? "输入副标题..."
-                  : "输入内容..."
-              }
-              placeholderTextColor="#C4C4C4"
-            />
-          );
-        })}
+          {/* Content Card */}
+          <View style={styles.contentCard}>
+            {/* Text Pill - folder name */}
+            <View style={styles.ncTextPill}>
+              <IconPark name="folder" size={14} color="#4F4F4F" />
+              <Text style={styles.ncPillText}>{noteTitle}</Text>
+            </View>
+
+            {/* Image Title */}
+            {textBlocks.filter(b => b.type === "title").length > 0 ? (
+              textBlocks.filter(b => b.type === "title").map((block, i) => (
+                <TextInput
+                  key={`title-${i}`}
+                  style={styles.ncImageTitle}
+                  value={block.text}
+                  onChangeText={(val) => updateBlockText(blocks.indexOf(block), val)}
+                  multiline
+                  placeholder="Enter title..."
+                  placeholderTextColor="#C4C4C4"
+                />
+              ))
+            ) : (
+              <TextInput
+                style={styles.ncImageTitle}
+                value={noteTitle}
+                onChangeText={() => {}}
+                multiline
+                placeholder="Enter title..."
+                placeholderTextColor="#C4C4C4"
+              />
+            )}
+
+            {/* OCR Section */}
+            <View style={styles.ncOcrSection}>
+              {textBlocks.filter(b => b.type !== "title").length > 0 ? (
+                textBlocks.filter(b => b.type !== "title").map((block, i) => (
+                  <TextInput
+                    key={`body-${i}`}
+                    style={styles.ncOcrText}
+                    value={block.text}
+                    onChangeText={(val) => updateBlockText(blocks.indexOf(block), val)}
+                    multiline
+                    placeholder="OCR text..."
+                    placeholderTextColor="#C4C4C4"
+                  />
+                ))
+              ) : (
+                <TextInput
+                  style={styles.ncOcrText}
+                  value=""
+                  editable={false}
+                  multiline
+                  placeholder="No text extracted yet."
+                  placeholderTextColor="#C4C4C4"
+                />
+              )}
+              <TouchableOpacity style={styles.ncOcrRetry} onPress={() => {}}>
+                <IconPark name="refresh" size={12} color="#52525B" />
+                <Text style={styles.ncOcrRetryText}>重新识别</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Tags */}
+            <View style={styles.ncTagsRow}>
+              {note?.tags ? (
+                (() => {
+                  const raw = note.tags || '';
+                  let list: string[] = [];
+                  try { list = JSON.parse(raw); } catch { list = raw.split(',').map(t => t.trim()).filter(Boolean); }
+                  return list.map((tag, i) => {
+                    const colors = getTagColors(tag);
+                    return (
+                      <View key={i} style={[styles.ncBadgeElement, { backgroundColor: colors.bg }]}>
+                        <Text style={[styles.ncBadgeText, { color: colors.text }]}>{tag}</Text>
+                        <TouchableOpacity
+                          style={styles.ncBadgeRemove}
+                          onPress={() => removeTag(tag)}
+                          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                        >
+                          <Text style={[styles.ncBadgeRemoveText, { color: colors.text }]}>×</Text>
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  });
+                })()
+              ) : (
+                <Text style={styles.ncBadgePlaceholder}>No tags</Text>
+              )}
+              <TouchableOpacity style={styles.ncAddTagBtn} onPress={handleAddTag}>
+                <Text style={styles.ncAddTagBtnText}>+</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        {/* Dots Indicator */}
+        {imageBlocks.length > 0 && (
+          <View style={styles.dotsContainer}>
+            {imageBlocks.map((_, index) => (
+              <TouchableOpacity
+                key={index}
+                onPress={() => goToImage(index)}
+                activeOpacity={0.7}
+              >
+                <View
+                  style={[
+                    styles.dot,
+                    index === currentImageIndex && styles.dotActive,
+                  ]}
+                />
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {/* Bottom Spacing */}
+        <View style={styles.bottomSpacer} />
       </ScrollView>
 
       {/* Image Preview Modal */}
@@ -278,6 +486,45 @@ export default function NoteScreen() {
           )}
         </View>
       </Modal>
+
+      {/* Tag Bottom Sheet */}
+      <Modal visible={tagModalVisible} transparent animationType="none" onRequestClose={() => setTagModalVisible(false)}>
+        <TouchableOpacity
+          style={styles.tagSheetBg}
+          activeOpacity={1}
+          onPress={() => setTagModalVisible(false)}
+        >
+          <Animated.View
+            style={[
+              styles.tagSheetCard,
+              { transform: [{ translateY: tagSlideAnim }] },
+            ]}
+          >
+            <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+              <View style={styles.tagSheetHandle} />
+              <Text style={styles.tagSheetTitle}>Add Tag</Text>
+              <TextInput
+                style={styles.tagSheetInput}
+                value={tagInputValue}
+                onChangeText={setTagInputValue}
+                placeholder="Enter tag name..."
+                placeholderTextColor="#C4C4C4"
+                autoFocus
+                returnKeyType="done"
+                onSubmitEditing={confirmTag}
+              />
+              <View style={styles.tagSheetActions}>
+                <TouchableOpacity style={styles.tagSheetCancel} onPress={() => setTagModalVisible(false)}>
+                  <Text style={styles.tagSheetCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.tagSheetConfirm} onPress={confirmTag}>
+                  <Text style={styles.tagSheetConfirmText}>Add</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          </Animated.View>
+        </TouchableOpacity>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -285,44 +532,33 @@ export default function NoteScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: "#FFFFFF",
   },
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#FAFAFA",
+    backgroundColor: "#E5E5E5",
   },
   topBar: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingTop: 30,
-    paddingBottom: 0,
-    backgroundColor: "#FAFAFA",
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F0EE",
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 12,
+    backgroundColor: "#FFFFFF",
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#FFF",
-    justifyContent: "center",
+    flexDirection: "row",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
+    gap: 4,
+    paddingVertical: 8,
   },
-  topBarTitle: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: "600",
+  backBtnText: {
+    fontSize: 14,
+    fontWeight: "500",
     color: "#18181B",
-    textAlign: "center",
-    marginHorizontal: 12,
   },
   topBarActions: {
     flexDirection: "row",
@@ -330,113 +566,274 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   actionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "#18181B",
     borderRadius: 100,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 8,
+    gap: 4,
   },
   actionBtnDisabled: {
     opacity: 0.5,
   },
   actionBtnText: {
     color: "#FFF",
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
   },
-  shareBtn: {
+  shareIconBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#FFF",
+    alignItems: "center",
     justifyContent: "center",
+  },
     alignItems: "center",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 0.602 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2.29,
+    elevation: 3,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 40,
+  },
+
+  /* Main Card Container */
+  mainCard: {
+    marginTop: 4,
+    marginBottom: 16,
+    backgroundColor: "#F0F0F0",
+    width: SCREEN_WIDTH,
+    borderRadius: 20,
+    padding: WRAPPER_PADDING,
+    gap: 12,
+  },
+
+  /* Carousel Section */
+  carouselSection: {
+    padding: 0,
+    overflow: "hidden",
+    position: "relative",
   },
   carouselContainer: {
-    backgroundColor: "#FFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F0EE",
-    justifyContent: "center",
+    overflow: "hidden",
+  },
+  carouselContent: {
     alignItems: "center",
-    marginTop: -40,
   },
-  carouselImage: {
-    width: SCREEN_WIDTH,
-    height: 300,
-    resizeMode: "contain",
+  imageCard: {
+    width: CARD_WIDTH,
+    height: CARD_WIDTH * 1.5,
+    borderRadius: 17,
+    overflow: "hidden",
+    marginHorizontal: CARD_SPACING / 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 0.602187 },
+    shadowOpacity: 0.08,
+    shadowRadius: 0.602187,
+    elevation: 3,
   },
+  imageContainer: {
+    width: "100%",
+    height: "100%",
+  },
+  imageStyle: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 17,
+  },
+  cardWrapper: {
+    marginRight: CARD_SPACING,
+  },
+  card: {
+    width: CARD_WIDTH,
+    height: CARD_WIDTH * 1.5,
+    borderRadius: 17,
+    overflow: "hidden",
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 0.602187 },
+    shadowOpacity: 0.08,
+    shadowRadius: 0.602187,
+    elevation: 3,
+  },
+  cardImage: {
+    width: "100%",
+    height: "100%",
+  },
+  cardOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "transparent",
+  },
+  cardBadge: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.9)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cardBadgeText: {
+    fontSize: 12,
+    fontWeight: "700" as const,
+    color: "#18181B",
+  },
+
+  /* Content Card */
+  contentCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 0.602187 },
+    shadowOpacity: 0.08,
+    shadowRadius: 0.602187,
+    elevation: 3,
+  },
+
+  /* Text Pill - folder name */
+  ncTextPill: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: "rgba(0,0,0,0.2)",
+    borderRadius: 25,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    marginBottom: 12,
+    gap: 4,
+  },
+  ncPillText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#4F4F4F",
+    letterSpacing: 0.3,
+  },
+
+  /* Image Title */
+  ncImageTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#18181B",
+    marginBottom: 12,
+    lineHeight: 30,
+    paddingVertical: 0,
+  },
+
+  /* OCR Section */
+  ncOcrSection: {
+    marginBottom: 16,
+  },
+  ncOcrText: {
+    fontSize: 14,
+    lineHeight: 22,
+    color: "#52525B",
+    minHeight: 60,
+    paddingVertical: 0,
+  },
+  ncOcrRetry: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+    alignSelf: "flex-start",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.12)",
+    backgroundColor: "#FFFFFF",
+  },
+  ncOcrRetryText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#52525B",
+  },
+
+  /* Tags */
+  ncTagsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 7,
+    alignItems: "center",
+    marginTop: 16,
+  },
+  ncBadgeElement: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 20,
+    paddingLeft: 12,
+    paddingRight: 8,
+    paddingVertical: 6,
+    gap: 4,
+  },
+  ncBadgeText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  ncBadgeRemove: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    opacity: 0.6,
+  },
+  ncBadgeRemoveText: {
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  ncBadgePlaceholder: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#A1A1AA",
+  },
+  ncAddTagBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#F4F4F5",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  ncAddTagBtnText: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: "#52525B",
+  },
+
+  /* Dots Indicator */
   dotsContainer: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    paddingVertical: 12,
     gap: 6,
+    paddingVertical: 12,
   },
   dot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#D4D4D8",
+    backgroundColor: "#A1A1AA",
   },
   dotActive: {
-    width: 18,
-    borderRadius: 3,
+    width: 20,
     backgroundColor: "#18181B",
   },
-  scrollView: {
-    flex: 1,
+  bottomSpacer: {
+    height: 60,
   },
-  content: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  empty: {
-    textAlign: "center",
-    color: "#A1A1AA",
-    marginTop: 60,
-    fontSize: 15,
-  },
-  titleText: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: "#18181B",
-    marginBottom: 8,
-    lineHeight: 38,
-    letterSpacing: -0.5,
-  },
-  subtitleText: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#18181B",
-    marginTop: 24,
-    marginBottom: 10,
-    lineHeight: 28,
-  },
-  headingText: {
-    fontSize: 17,
-    fontWeight: "600",
-    color: "#27272A",
-    marginTop: 18,
-    marginBottom: 8,
-    lineHeight: 24,
-  },
-  paragraphText: {
-    fontSize: 16,
-    color: "#3F3F46",
-    lineHeight: 26,
-    marginBottom: 8,
-  },
-  listItemText: {
-    fontSize: 16,
-    color: "#3F3F46",
-    lineHeight: 24,
-    paddingLeft: 16,
-    marginBottom: 6,
-  },
+
+  /* Modal */
   modalBg: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.95)",
@@ -451,12 +848,86 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(255,255,255,0.15)",
     justifyContent: "center",
     alignItems: "center",
   },
   previewImage: {
     width: "90%",
     height: "70%",
+  },
+
+  /* Tag Bottom Sheet */
+  tagSheetBg: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-end",
+  },
+  tagSheetCard: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 32,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  tagSheetHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#E4E4E7",
+    alignSelf: "center",
+    marginTop: 10,
+    marginBottom: 16,
+  },
+  tagSheetTitle: {
+    fontSize: 17,
+    fontWeight: "600",
+    color: "#18181B",
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  tagSheetInput: {
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.12)",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: "#18181B",
+    backgroundColor: "#F4F4F5",
+    marginBottom: 16,
+  },
+  tagSheetActions: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  tagSheetCancel: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 100,
+    backgroundColor: "#F4F4F5",
+    alignItems: "center",
+  },
+  tagSheetCancelText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#52525B",
+  },
+  tagSheetConfirm: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 100,
+    backgroundColor: "#18181B",
+    alignItems: "center",
+  },
+  tagSheetConfirmText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
 });

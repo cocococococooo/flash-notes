@@ -14,9 +14,9 @@ import {
   Platform,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
-import { api } from "../services/api";
-import { API_BASE_URL } from "../constants/config";
-import IconPark from "../components/IconPark";
+import { api } from "../../services/api";
+import { API_BASE_URL } from "../../constants/config";
+import IconPark from "../../components/IconPark";
 
 interface NoteItem {
   id: number;
@@ -102,7 +102,6 @@ export default function NotesScreen() {
   const projects = useMemo(() => {
     const map = new Map<number, { id: number; title: string; count: number; note: NoteItem | null }>();
     
-    // 先添加所有项目
     projectsList.forEach((project) => {
       map.set(project.id, {
         id: project.id,
@@ -112,7 +111,6 @@ export default function NotesScreen() {
       });
     });
     
-    // 再添加笔记数据
     notes.forEach((note) => {
       const existing = map.get(note.projectId);
       if (existing) {
