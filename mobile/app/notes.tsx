@@ -8,6 +8,10 @@ import {
   StyleSheet,
   ActivityIndicator,
   Image,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { api } from "../services/api";
@@ -25,6 +29,21 @@ interface NoteItem {
   updatedAt: string;
 }
 
+const FOLDER_COLORS = [
+  { start: "#A855F7", end: "#7C3AED" },
+  { start: "#F97316", end: "#EA580C" },
+  { start: "#3B82F6", end: "#2563EB" },
+  { start: "#10B981", end: "#059669" },
+  { start: "#EC4899", end: "#DB2777" },
+  { start: "#8B5CF6", end: "#6D28D9" },
+  { start: "#F59E0B", end: "#D97706" },
+  { start: "#06B6D4", end: "#0891B2" },
+];
+
+function getFolderColor(id: number) {
+  return FOLDER_COLORS[id % FOLDER_COLORS.length];
+}
+
 function stripMarkdown(md: string): string {
   return md
     .replace(/!\[.*?\]\(.*?\)/g, "[图片]")
@@ -33,22 +52,13 @@ function stripMarkdown(md: string): string {
     .trim();
 }
 
-function relativeTime(dateStr: string): string {
-  const now = Date.now();
-  const d = new Date(dateStr).getTime();
-  const diff = Math.floor((now - d) / 1000);
-  if (diff < 60) return "刚刚";
-  if (diff < 3600) return `${Math.floor(diff / 60)} 分钟前`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)} 小时前`;
-  if (diff < 604800) return `${Math.floor(diff / 86400)} 天前`;
-  return new Date(dateStr).toLocaleDateString("zh-CN");
-}
-
 export default function NotesScreen() {
   const router = useRouter();
   const [notes, setNotes] = useState<NoteItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [createModalVisible, setCreateModalVisible] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [creating, setCreating] = useState(false);
 
   const loadNotes = useCallback(async () => {
     try {
@@ -67,28 +77,39 @@ export default function NotesScreen() {
     }, [loadNotes])
   );
 
-  const allTags = useMemo(() => {
-    const tagSet = new Set<string>();
-    notes.forEach((note) => {
-      try {
-        const tags = JSON.parse(note.tags || "[]");
-        tags.forEach((tag: string) => tagSet.add(tag));
-      } catch {}
-    });
-    return Array.from(tagSet);
-  }, [notes]);
+  const handleCreateFolder = async () => {
+    const title = newFolderName.trim();
+    if (!title) return;
+    setCreating(true);
+    try {
+      const project = await api.createProject(title);
+      setCreateModalVisible(false);
+      setNewFolderName("");
+      router.push(`/note/${project.id}`);
+    } catch (e: any) {
+      console.error(e);
+    } finally {
+      setCreating(false);
+    }
+  };
 
-  const filteredNotes = useMemo(() => {
-    if (!selectedTag) return notes;
-    return notes.filter((note) => {
-      try {
-        const tags = JSON.parse(note.tags || "[]");
-        return tags.includes(selectedTag);
-      } catch {
-        return false;
+  const projects = useMemo(() => {
+    const map = new Map<number, { id: number; title: string; count: number; note: NoteItem | null }>();
+    notes.forEach((note) => {
+      const existing = map.get(note.projectId);
+      if (existing) {
+        existing.count++;
+      } else {
+        map.set(note.projectId, {
+          id: note.projectId,
+          title: note.projectTitle || "未命名项目",
+          count: 1,
+          note,
+        });
       }
     });
-  }, [notes, selectedTag]);
+    return Array.from(map.values());
+  }, [notes]);
 
   if (loading) {
     return (
@@ -101,120 +122,53 @@ export default function NotesScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>全部笔记</Text>
-        <Text style={styles.count}>{filteredNotes.length} 篇</Text>
+        <Text style={styles.title}>文件夹</Text>
+        <TouchableOpacity
+          style={styles.createBtn}
+          onPress={() => setCreateModalVisible(true)}
+          activeOpacity={0.7}
+        >
+          <IconPark name="plus" size={16} color="#FFF" />
+          <Text style={styles.createBtnText}>新建文件夹</Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Tag Filter */}
-      {allTags.length > 0 && (
-        <View style={styles.filterContainer}>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterScroll}
-          >
-            <TouchableOpacity
-              style={[styles.filterTag, !selectedTag && styles.filterTagActive]}
-              onPress={() => setSelectedTag(null)}
-            >
-              <Text style={[styles.filterTagText, !selectedTag && styles.filterTagTextActive]}>
-                全部
-              </Text>
-            </TouchableOpacity>
-            {allTags.map((tag, i) => (
-              <TouchableOpacity
-                key={i}
-                style={[styles.filterTag, selectedTag === tag && styles.filterTagActive]}
-                onPress={() => setSelectedTag(selectedTag === tag ? null : tag)}
-              >
-                <Text style={[styles.filterTagText, selectedTag === tag && styles.filterTagTextActive]}>
-                  {tag}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      )}
-
       <FlatList
-        data={filteredNotes}
+        data={projects}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={styles.list}
+        numColumns={2}
+        columnWrapperStyle={styles.row}
         renderItem={({ item }) => {
-          let tagList: string[] = [];
-          try { tagList = JSON.parse(item.tags); } catch {}
-          const displayImages = (item.imageUrls || []).slice(0, 3);
-
+          const colors = getFolderColor(item.id);
           return (
             <TouchableOpacity
-              style={styles.card}
-              onPress={() => router.push(`/note/${item.projectId}`)}
-              activeOpacity={0.7}
+              style={styles.folderCard}
+              onPress={() => router.push(`/note/${item.id}`)}
+              activeOpacity={0.85}
             >
-              {/* Stacked Images Area */}
-              <View style={styles.imageStackContainer}>
-                {displayImages.length === 0 ? (
-                  <View style={[styles.stackImage, styles.stackPlaceholder, { transform: [{ rotate: "-6deg" }] }]}>
-                    <IconPark name="notes" size={28} color="#D4D4D8" />
-                  </View>
-                ) : (
-                  displayImages.map((url, i) => {
-                    const rotations = ["-8deg", "0deg", "6deg"];
-                    const offsets = [
-                      { top: 4, left: 0 },
-                      { top: 0, left: 10 },
-                      { top: 2, left: 20 },
-                    ];
-                    const transformStyle = {
-                      transform: [{ rotate: rotations[i] || "0deg" }],
-                      top: offsets[i]?.top || 0,
-                      left: offsets[i]?.left || 0,
-                      zIndex: i,
-                    };
-                    const fullUrl = url.startsWith("http") ? url : `${API_BASE_URL}${url}`;
-                    return (
-                      <Image
-                        key={i}
-                        source={{ uri: fullUrl }}
-                        style={[styles.stackImage, transformStyle]}
-                      />
-                    );
-                  })
-                )}
-              </View>
-
-              {/* Text Content */}
-              <View style={styles.textArea}>
-                <Text style={styles.cardTitle} numberOfLines={1}>
-                  {item.content ? stripMarkdown(item.content).split("。")[0] || "无标题" : "无标题"}
-                </Text>
-                <Text style={styles.cardExcerpt} numberOfLines={2}>
-                  {stripMarkdown(item.content).substring(0, 120)}
-                </Text>
-
-                {/* Meta Row */}
-                <View style={styles.metaRow}>
-                  <View style={styles.metaItem}>
-                    <IconPark name="camera" size={12} color="#71717A" />
-                    <Text style={styles.metaText}>{item.imageCount} 张截图</Text>
-                  </View>
-                  <Text style={styles.metaDot}>·</Text>
-                  <Text style={styles.metaText}>{relativeTime(item.updatedAt)}</Text>
+              <View style={[styles.folderBg, { backgroundColor: colors.start }]}>
+                <View style={[styles.folderBgOverlay, { backgroundColor: colors.end }]} />
+                
+                {/* Paper Stack Effect */}
+                <View style={styles.paperStack}>
+                  <View style={[styles.paper, styles.paper3]} />
+                  <View style={[styles.paper, styles.paper2]} />
+                  <View style={[styles.paper, styles.paper1]} />
                 </View>
 
-                {/* Tags */}
-                {tagList.length > 0 && (
-                  <View style={styles.tagsRow}>
-                    {tagList.slice(0, 3).map((tag: string, i: number) => (
-                      <View key={i} style={styles.tag}>
-                        <Text style={styles.tagText}>{tag}</Text>
-                      </View>
-                    ))}
-                    {tagList.length > 3 && (
-                      <Text style={styles.moreTag}>+{tagList.length - 3}</Text>
-                    )}
+                {/* Folder Bottom */}
+                <View style={styles.folderBottom}>
+                  <View style={styles.folderInfo}>
+                    <Text style={styles.folderName} numberOfLines={1}>
+                      {item.title}
+                    </Text>
+                    <Text style={styles.folderCount}>{item.count} 个笔记</Text>
                   </View>
-                )}
+                  <TouchableOpacity style={styles.menuBtn} onPress={() => {}}>
+                    <Text style={styles.menuDots}>•••</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </TouchableOpacity>
           );
@@ -222,13 +176,65 @@ export default function NotesScreen() {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <View style={{ marginBottom: 12, opacity: 0.5 }}>
-              <IconPark name="write" size={44} color="#A1A1AA" />
+              <IconPark name="folder" size={44} color="#A1A1AA" />
             </View>
-            <Text style={styles.empty}>还没有笔记</Text>
-            <Text style={styles.emptyHint}>导入截图并生成总结后，笔记会出现在这里</Text>
+            <Text style={styles.empty}>还没有文件夹</Text>
+            <Text style={styles.emptyHint}>点击右上角新建文件夹，或导入截图自动创建</Text>
           </View>
         }
       />
+
+      {/* Create Folder Modal */}
+      <Modal
+        visible={createModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setCreateModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalBg}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setCreateModalVisible(false)}
+          />
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>新建文件夹</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={newFolderName}
+              onChangeText={setNewFolderName}
+              placeholder="输入文件夹名称"
+              placeholderTextColor="#A1A1AA"
+              autoFocus
+              returnKeyType="done"
+              onSubmitEditing={handleCreateFolder}
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalBtnCancel]}
+                onPress={() => {
+                  setCreateModalVisible(false);
+                  setNewFolderName("");
+                }}
+              >
+                <Text style={styles.modalBtnCancelText}>取消</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalBtnConfirm, !newFolderName.trim() && styles.modalBtnDisabled]}
+                onPress={handleCreateFolder}
+                disabled={creating || !newFolderName.trim()}
+              >
+                <Text style={styles.modalBtnConfirmText}>
+                  {creating ? "创建中..." : "创建"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -239,112 +245,203 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "baseline",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 12,
   },
   title: { fontSize: 26, fontWeight: "700", color: "#18181B" },
-  count: { fontSize: 13, fontWeight: "500", color: "#A1A1AA" },
-  filterContainer: {
-    marginBottom: 8,
-  },
-  filterScroll: {
-    paddingHorizontal: 16,
-    gap: 8,
-  },
-  filterTag: {
+  createBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#18181B",
+    borderRadius: 100,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 100,
-    backgroundColor: "#F4F4F5",
+    gap: 4,
   },
-  filterTagActive: {
-    backgroundColor: "#18181B",
-  },
-  filterTagText: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: "#71717A",
-  },
-  filterTagTextActive: {
+  createBtnText: {
     color: "#FFF",
+    fontSize: 13,
+    fontWeight: "600",
   },
   list: { paddingHorizontal: 16, paddingBottom: 100 },
+  row: { justifyContent: "space-between" },
 
-  card: {
-    backgroundColor: "#FFF",
+  folderCard: {
+    width: "48%",
+    marginBottom: 16,
     borderRadius: 16,
-    padding: 14,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#ECECEE",
-    flexDirection: "row",
-    gap: 14,
-    alignItems: "flex-start",
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  folderBg: {
+    height: 160,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    position: "relative",
+    overflow: "hidden",
+  },
+  folderBgOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.6,
   },
 
-  /* Stacked images */
-  imageStackContainer: {
+  /* Paper Stack */
+  paperStack: {
+    position: "absolute",
+    top: 12,
+    left: "50%",
+    marginLeft: -40,
     width: 80,
-    height: 90,
-    position: "relative",
-    flexShrink: 0,
+    height: 70,
   },
-  stackImage: {
-    width: 64,
-    height: 80,
-    borderRadius: 10,
+  paper: {
     position: "absolute",
-    backgroundColor: "#F4F4F5",
-    borderWidth: 1.5,
-    borderColor: "#FFF",
+    width: 56,
+    height: 48,
+    backgroundColor: "rgba(255,255,255,0.9)",
+    borderRadius: 6,
     shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1 },
   },
-  stackPlaceholder: {
-    position: "absolute",
+  paper1: {
+    top: 0,
+    left: 12,
+    transform: [{ rotate: "-5deg" }],
+    zIndex: 3,
+  },
+  paper2: {
     top: 4,
+    left: 18,
+    transform: [{ rotate: "2deg" }],
+    zIndex: 2,
+    opacity: 0.85,
+  },
+  paper3: {
+    top: 8,
+    left: 24,
+    transform: [{ rotate: "8deg" }],
+    zIndex: 1,
+    opacity: 0.7,
+  },
+
+  /* Folder Bottom */
+  folderBottom: {
+    position: "absolute",
+    bottom: 0,
     left: 0,
+    right: 0,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+    padding: 14,
+  },
+  folderInfo: { flex: 1 },
+  folderName: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#FFF",
+    marginBottom: 2,
+  },
+  folderCount: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: "rgba(255,255,255,0.8)",
+  },
+  menuBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.25)",
     alignItems: "center",
     justifyContent: "center",
   },
-
-  /* Text area */
-  textArea: { flex: 1, gap: 4 },
-  cardTitle: {
-    fontSize: 16,
+  menuDots: {
+    color: "#FFF",
+    fontSize: 12,
     fontWeight: "700",
-    color: "#18181B",
-    lineHeight: 22,
+    letterSpacing: -1,
   },
-  cardExcerpt: {
-    fontSize: 13,
-    color: "#71717A",
-    lineHeight: 18,
-  },
-  metaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-  },
-  metaItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-  },
-  metaText: { fontSize: 12, color: "#71717A" },
-  metaDot: { fontSize: 12, color: "#D4D4D8" },
-
-  tagsRow: { flexDirection: "row", flexWrap: "wrap", gap: 5, marginTop: 2 },
-  tag: { backgroundColor: "#F4F4F5", paddingHorizontal: 9, paddingVertical: 3, borderRadius: 100 },
-  tagText: { fontSize: 11, color: "#18181B", fontWeight: "500" },
-  moreTag: { fontSize: 11, color: "#A1A1AA", fontWeight: "500", alignSelf: "center" },
 
   emptyContainer: { alignItems: "center", marginTop: 80 },
   empty: { fontSize: 16, fontWeight: "500", color: "#71717A" },
   emptyHint: { fontSize: 13, color: "#A1A1AA", marginTop: 6, textAlign: "center", paddingHorizontal: 40 },
+
+  /* Create Folder Modal */
+  modalBg: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  modalCard: {
+    width: "85%",
+    maxWidth: 360,
+    backgroundColor: "#FFF",
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 10,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#18181B",
+    marginBottom: 16,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: "#E4E4E7",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: "#18181B",
+    backgroundColor: "#FAFAFA",
+  },
+  modalActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 8,
+    marginTop: 16,
+  },
+  modalBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 100,
+    minWidth: 72,
+    alignItems: "center",
+  },
+  modalBtnCancel: {
+    backgroundColor: "#F4F4F5",
+  },
+  modalBtnCancelText: {
+    color: "#52525B",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  modalBtnConfirm: {
+    backgroundColor: "#18181B",
+  },
+  modalBtnConfirmText: {
+    color: "#FFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  modalBtnDisabled: {
+    opacity: 0.4,
+  },
 });

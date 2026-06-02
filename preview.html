@@ -304,7 +304,7 @@
 
   /* Note detail image + OCR block */
   .note-img-block {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
   }
   .note-img-block .note-img-thumb {
     width: 100%;
@@ -315,6 +315,7 @@
     cursor: pointer;
     transition: background 0.2s;
     margin-bottom: 8px;
+    margin-top: 0;
   }
   .note-img-block .note-img-thumb img {
     width: 100%;
@@ -539,7 +540,7 @@
     to { opacity: 1; }
   }
 
-  /* ===== TAB 2: NOTES LIST ===== */
+  /* ===== TAB 2: FOLDERS ===== */
   .notes-header {
     display: flex;
     justify-content: space-between;
@@ -559,110 +560,178 @@
     letter-spacing: 0.3px;
   }
   .notes-header .nc { font-size: 13px; color: var(--text-tertiary); font-weight: 500; font-family: "Inter", sans-serif; }
-  .note-add-btn {
-    width: 34px; height: 34px;
+  .create-folder-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--text-primary);
+    color: #FFF;
+    border: none;
     border-radius: 50%;
-    border: 1.5px solid var(--border);
-    background: var(--surface);
-    display: flex; align-items: center; justify-content: center;
+    width: 36px;
+    height: 36px;
     cursor: pointer;
-    color: var(--text-primary);
     transition: all 0.2s;
+  }
+  .create-folder-btn:hover { background: #333; }
+  .create-folder-btn:active { transform: scale(0.95); }
+  .create-folder-btn span { display: inline-flex; align-items: center; justify-content: center; }
+  .create-folder-btn span svg { width: 18px; height: 18px; }
+
+  .notes-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    padding: 0 20px 20px;
+  }
+
+  .folder-card {
+    border-radius: 16px;
+    overflow: hidden;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .folder-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.12); }
+  .folder-card:active { transform: scale(0.97); }
+
+  .folder-bg {
+    height: 150px;
+    position: relative;
+    overflow: hidden;
+  }
+  .folder-bg::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 50%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 100%);
+    pointer-events: none;
+  }
+
+  .folder-papers {
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 75%;
+    height: 60px;
+  }
+  .folder-paper {
+    position: absolute;
+    width: 56%;
+    height: 46px;
+    background: rgba(255,255,255,0.95);
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  }
+  .folder-paper:nth-child(1) { top: 8px; left: 0; transform: rotate(-6deg); z-index: 3; }
+  .folder-paper:nth-child(2) { top: 4px; left: 20%; transform: rotate(0deg); z-index: 2; }
+  .folder-paper:nth-child(3) { top: 8px; left: 40%; transform: rotate(6deg); z-index: 1; }
+  .folder-paper::before,
+  .folder-paper::after {
+    content: '';
+    position: absolute;
+    left: 12%;
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(0,0,0,0.06);
+  }
+  .folder-paper::before { top: 35%; width: 50%; }
+  .folder-paper::after { top: 55%; width: 32%; }
+
+  .folder-bottom {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding: 14px 16px;
+  }
+  .folder-info { flex: 1; min-width: 0; }
+  .folder-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #FFF;
+    margin-bottom: 2px;
+  }
+  .folder-count {
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.8);
+  }
+  .folder-menu {
+    width: 28px;
+    height: 28px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
     flex-shrink: 0;
   }
-  .note-add-btn:hover { background: #F4F4F5; border-color: var(--border-hover); }
-  .note-add-btn:active { transform: scale(0.92); }
+  .folder-menu-dots {
+    color: #FFF;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: -1px;
+  }
 
-  .notes-list { padding: 0 20px 20px; }
-  .note-card {
-    background: var(--surface);
-    border-radius: var(--radius-md);
-    padding: 14px;
-    margin-bottom: 12px;
-    cursor: pointer;
-    border: 1px solid var(--border);
-    transition: all 0.2s ease;
+  /* Project Note List */
+  .project-notes-list {
+    padding: 16px 20px 40px;
+  }
+  .project-note-card {
     display: flex;
     gap: 14px;
-    align-items: flex-start;
+    padding: 16px;
+    background: var(--surface);
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
   }
-  .note-card:hover { border-color: var(--border-hover); }
-  .note-card:active { transform: scale(0.985); }
-
-  /* Stacked image area */
-  .note-card .nimg-stack {
-    width: 80px; height: 90px; position: relative; flex-shrink: 0;
+  .project-note-card:hover { border-color: var(--border-hover); }
+  .project-note-card:active { transform: scale(0.985); }
+  .project-note-card .pnc-stack {
+    width: 64px; height: 72px; position: relative; flex-shrink: 0;
   }
-  .note-card .nimg-stack .nimg {
-    width: 64px; height: 80px; border-radius: 10px; position: absolute;
+  .project-note-card .pnc-img {
+    width: 52px; height: 64px; border-radius: 8px; position: absolute;
     background: #F4F4F5; border: 1.5px solid #FFF;
     box-shadow: 0 2px 4px rgba(0,0,0,0.08);
     object-fit: cover;
   }
-  .note-card .nimg-stack .nimg:nth-child(1) { top: 4px; left: 0; transform: rotate(-8deg); z-index: 1; }
-  .note-card .nimg-stack .nimg:nth-child(2) { top: 0; left: 10px; transform: rotate(0deg); z-index: 2; }
-  .note-card .nimg-stack .nimg:nth-child(3) { top: 2px; left: 20px; transform: rotate(6deg); z-index: 3; }
-  .note-card .nimg-stack .nimg-placeholder {
-    width: 64px; height: 80px; border-radius: 10px; position: absolute;
+  .project-note-card .pnc-img:nth-child(1) { top: 4px; left: 0; transform: rotate(-6deg); z-index: 1; }
+  .project-note-card .pnc-img:nth-child(2) { top: 0; left: 8px; transform: rotate(0deg); z-index: 2; }
+  .project-note-card .pnc-img:nth-child(3) { top: 4px; left: 16px; transform: rotate(6deg); z-index: 3; }
+  .project-note-card .pnc-placeholder {
+    width: 52px; height: 64px; border-radius: 8px; position: absolute;
     background: #F4F4F5; border: 1.5px solid #FFF;
     box-shadow: 0 2px 4px rgba(0,0,0,0.08);
     display: flex; align-items: center; justify-content: center;
     color: var(--text-quaternary);
   }
-  .note-card .nimg-stack .nimg-placeholder:nth-child(1) { top: 4px; left: 0; transform: rotate(-8deg); z-index: 1; }
-
-  /* Text area */
-  .note-card .ntxt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-  .note-card .nct {
-    font-size: 16px; font-weight: 600; color: var(--text-primary); line-height: 1.4;
-    display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical;
-    overflow: hidden;
+  .project-note-card .pnc-placeholder:nth-child(1) { top: 4px; left: 0; transform: rotate(-6deg); z-index: 1; }
+  .project-note-card .pnc-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .project-note-card .pnc-title {
+    font-size: 15px; font-weight: 600; color: var(--text-primary); line-height: 1.4;
+    display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;
   }
-  .note-card .nce {
+  .project-note-card .pnc-excerpt {
     font-size: 13px; color: var(--text-secondary); line-height: 1.5;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-    overflow: hidden;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
   }
-  .note-card .nmeta {
-    display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary);
+  .project-note-card .pnc-meta {
+    display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-tertiary); margin-top: auto;
   }
-  .note-card .nmeta .nmi { display: inline-flex; align-items: center; gap: 3px; }
-  .note-card .nmeta .nmi svg { width: 12px; height: 12px; }
-  .note-card .nmeta .ndot { color: var(--text-quaternary); }
-  .note-card .ntr { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 2px; }
-  .note-card .ntr .ntag {
-    padding: 3px 9px; border-radius: 100px;
+  .project-note-card .pnc-meta svg { width: 12px; height: 12px; }
+  .project-note-card .pnc-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 4px; }
+  .project-note-card .pnc-tag {
+    padding: 2px 8px; border-radius: 100px;
     font-size: 11px; font-weight: 500;
-  }
-  .note-card .ntr .nmore { font-size: 11px; color: var(--text-tertiary); font-weight: 500; align-self: center; }
-
-  /* Notes Filter */
-  .notes-filter {
-    display: flex;
-    gap: 8px;
-    padding: 0 20px 12px;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .notes-filter::-webkit-scrollbar { display: none; }
-  .notes-filter-tag {
-    flex-shrink: 0;
-    padding: 8px 14px;
-    border-radius: 100px;
-    background: #F4F4F5;
-    font-size: 13px;
-    font-weight: 500;
-    color: #71717A;
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
-  }
-  .notes-filter-tag:hover {
-    background: #E8E8EA;
-  }
-  .notes-filter-tag.active {
-    background: #18181B;
-    color: #FFF;
   }
 
   .empty-notes {
@@ -715,7 +784,7 @@
   }
   .overlay-topbar .o-action:hover { background: var(--accent); }
 
-  .overlay-scroll { flex: 1; overflow-y: auto; padding: 20px; }
+  .overlay-scroll { flex: 1; overflow-y: auto; padding: 16px 20px; }
   .overlay-scroll::-webkit-scrollbar { display: none; }
 
   /* Image card (reused) */
@@ -980,7 +1049,7 @@
     display: flex;
     align-items: center;
     min-height: 44pt;
-    padding: 8px 16px;
+    padding: 8px 16px 4px;
     background: #FAFAFA;
     border-bottom: 1px solid #F0F0EE;
     flex-shrink: 0;
@@ -1246,14 +1315,13 @@
     <div class="page" id="page-notes">
       <div class="notes-header">
         <div class="notes-header-left">
-          <h2>全部笔记</h2>
-          <span class="nc" id="noteCount">0 篇</span>
+          <h2>文件夹</h2>
+          <span class="nc" id="noteCount">0 个</span>
         </div>
-        <button class="note-add-btn" onclick="handleAddNote()">
-          <svg width="20" height="20" viewBox="0 0 48 48" fill="none"><path d="M24 8V40" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><path d="M8 24H40" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
+        <button class="create-folder-btn" onclick="showNewFolderSheet()">
+          <span data-icon="plus"></span>
         </button>
       </div>
-      <div class="notes-filter" id="notesFilter"></div>
       <div class="notes-list" id="notesList"></div>
     </div>
   </div>
@@ -1266,7 +1334,7 @@
     </div>
     <div class="tab-item" onclick="switchTab(1)" id="tab1">
       <span class="tab-icon" data-icon="notes"></span>
-      <span class="tab-label">笔记</span>
+      <span class="tab-label">文件夹</span>
     </div>
   </div>
 
@@ -1278,6 +1346,20 @@
       <button class="o-action" onclick="triggerFilePicker()">从相册导入</button>
     </div>
     <div class="overlay-scroll" id="projectImagesList"></div>
+  </div>
+
+  <!-- ===== OVERLAY: Project Note List ===== -->
+  <div class="overlay" id="overlay-project-notes">
+    <div class="overlay-topbar">
+      <button class="back" onclick="closeOverlay('overlay-project-notes')">
+        <span data-icon="arrowLeft" style="margin-right:4px"></span>返回
+      </button>
+      <span class="o-title" id="projectNotesTitle">项目</span>
+      <span></span>
+    </div>
+    <div class="overlay-scroll">
+      <div class="project-notes-list" id="projectNotesList"></div>
+    </div>
   </div>
 
   <!-- ===== OVERLAY: Note Detail ===== -->
@@ -1510,6 +1592,34 @@ function tagColor(tag) {
   return TAG_PALETTE[Math.abs(hash) % TAG_PALETTE.length];
 }
 
+window.folderColors = [
+  { start: '#A855F7', end: '#7C3AED' },
+  { start: '#F97316', end: '#EA580C' },
+  { start: '#3B82F6', end: '#2563EB' },
+  { start: '#10B981', end: '#059669' },
+  { start: '#EC4899', end: '#DB2777' },
+  { start: '#8B5CF6', end: '#6D28D9' },
+  { start: '#F59E0B', end: '#D97706' },
+  { start: '#06B6D4', end: '#0891B2' },
+];
+function getFolderColor(id) {
+  var fc = window.folderColors;
+  if (!fc || !fc.length) return { start: '#A855F7', end: '#7C3AED' };
+  if (id === undefined || id === null) return fc[0];
+  var hash = 0;
+  var str = String(id);
+  for (var i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  return fc[Math.abs(hash) % fc.length];
+}
+
+function updateNoteCount() {
+  // No-op: count is updated in renderNotes
+}
+
+// ===================== NOTE DETAIL =====================
+var currentImageIndex = 0;
+var isProcessingNewImport = false;
+
 // ===================== INIT =====================
 (function init() {
   initIcons();
@@ -1565,7 +1675,6 @@ function tagColor(tag) {
   currentProjectId = 1001;
   renderProjects();
   startCarousel();
-  renderNotesFilter();
   renderNotes();
   updateNoteCount();
 })();
@@ -1776,101 +1885,109 @@ function getAllNoteTags() {
   return Array.from(tagSet);
 }
 
-function renderNotesFilter() {
-  const filterContainer = document.getElementById('notesFilter');
-  const allTags = getAllNoteTags();
-  
-  if (allTags.length === 0) {
-    filterContainer.innerHTML = '';
-    return;
-  }
-  
-  let html = `<div class="notes-filter-tag ${!selectedNoteTag ? 'active' : ''}" onclick="filterNotesByTag(null)">全部</div>`;
-  allTags.forEach(tag => {
-    html += `<div class="notes-filter-tag ${selectedNoteTag === tag ? 'active' : ''}" onclick="filterNotesByTag('${tag}')">${tag}</div>`;
-  });
-  filterContainer.innerHTML = html;
-}
-
 function filterNotesByTag(tag) {
   selectedNoteTag = tag;
-  renderNotesFilter();
   renderNotes();
   updateNoteCount();
+}
+
+function openProjectNotes(projectId) {
+  var project = projects.find(p => p.id === projectId);
+  var title = project ? project.title : '项目';
+  document.getElementById('projectNotesTitle').textContent = title;
+  
+  var list = document.getElementById('projectNotesList');
+  var notes = allNotes.filter(n => n.projectId === projectId);
+  
+  if (notes.length === 0) {
+    list.innerHTML = '<div class="empty-notes"><div class="en-icon">' + icons.write + '</div><div class="en-t">还没有笔记</div><div class="en-h">导入截图后，笔记会出现在这里</div></div>';
+  } else {
+    list.innerHTML = notes.map((n, i) => {
+      var tagList = [];
+      try { tagList = JSON.parse(n.tags || '[]'); } catch {}
+      var imgs = (n.imageUrls || []).slice(0, 3);
+      var stackHtml = '';
+      if (imgs.length === 0) {
+        stackHtml = '<div class="pnc-placeholder" style="transform:rotate(-6deg);top:4px;left:0">' + icons.notes + '</div>';
+      } else {
+        stackHtml = imgs.map((url, j) => {
+          var rotations = ['-6deg', '0deg', '6deg'];
+          var tops = [4, 0, 4];
+          var lefts = [0, 8, 16];
+          return '<img class="pnc-img" src="' + url + '" style="transform:rotate(' + rotations[j] + ');top:' + tops[j] + 'px;left:' + lefts[j] + 'px;z-index:' + (j+1) + '" />';
+        }).join('');
+      }
+      var displayTags = tagList.slice(0, 3);
+      var moreCount = tagList.length - 3;
+      var plainText = n.notesText || '';
+
+      return '<div class="project-note-card" onclick="closeOverlay(\'overlay-project-notes\');openNoteDetail(' + n.projectId + ')">' +
+        '<div class="pnc-stack">' + stackHtml + '</div>' +
+        '<div class="pnc-txt">' +
+          '<div class="pnc-title">' + (n.title || n.projectTitle || '无标题') + '</div>' +
+          '<div class="pnc-excerpt">' + (plainText.substring(0, 120) || '暂无内容') + '</div>' +
+          '<div class="pnc-meta">' +
+            '<span>' + icons.camera + ' ' + n.imageCount + ' 张截图</span>' +
+            '<span>·</span>' +
+            '<span>' + new Date(n.updatedAt).toLocaleDateString('zh-CN') + '</span>' +
+          '</div>' +
+          (displayTags.length > 0 ? '<div class="pnc-tags">' + displayTags.map(function(t) { var c = tagColor(t); return '<span class="pnc-tag" style="background:' + c.bg + ';color:' + c.text + '">' + t + '</span>'; }).join('') + (moreCount > 0 ? '<span style="font-size:11px;color:var(--text-tertiary)">+' + moreCount + '</span>' : '') + '</div>' : '') +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+  
+  document.getElementById('overlay-project-notes').classList.add('open');
 }
 
 function renderNotes() {
   const list = document.getElementById('notesList');
   
-  let filteredNotes = allNotes;
-  if (selectedNoteTag) {
-    filteredNotes = allNotes.filter(n => {
-      try {
-        const tags = JSON.parse(n.tags || '[]');
-        return tags.includes(selectedNoteTag);
-      } catch {
-        return false;
-      }
-    });
-  }
-  
-  if (filteredNotes.length === 0) {
-    list.innerHTML = `<div class="empty-notes"><div class="en-icon">${icons.write}</div><div class="en-t">还没有笔记</div><div class="en-h">导入截图后，笔记会出现在这里</div></div>`;
+  const projectMap = new Map();
+  allNotes.forEach(n => {
+    if (!projectMap.has(n.projectId)) {
+      projectMap.set(n.projectId, {
+        id: n.projectId,
+        title: n.projectTitle || '未命名项目',
+        count: 0,
+      });
+    }
+    projectMap.get(n.projectId).count++;
+  });
+
+  const folders = Array.from(projectMap.values());
+  document.getElementById('noteCount').textContent = folders.length + ' 个';
+
+  if (folders.length === 0) {
+    list.innerHTML = `<div class="empty-notes" style="grid-column:1/-1"><div class="en-icon">${icons.folder}</div><div class="en-t">还没有文件夹</div><div class="en-h">点击右上角新建文件夹，或导入截图自动创建</div></div>`;
     return;
   }
-  list.innerHTML = filteredNotes.map((n, i) => {
-    const tagList = (() => { try { return JSON.parse(n.tags); } catch { return []; } })();
-    const imgs = (n.imageUrls || []).slice(0, 3);
-    const imgCount = n.imageCount;
-    let stackHtml = '';
-    if (imgs.length === 0) {
-      stackHtml = `<div class="nimg-placeholder" style="transform:rotate(-8deg);top:4px;left:0">${icons.notes}</div>`;
-    } else {
-      stackHtml = imgs.map((url, j) => {
-        const rotations = ['-8deg', '0deg', '6deg'];
-        const tops = [4, 0, 2];
-        const lefts = [0, 10, 20];
-        return `<img class="nimg" src="${url}" style="transform:rotate(${rotations[j]});top:${tops[j]}px;left:${lefts[j]}px;z-index:${j+1}" />`;
-      }).join('');
-    }
-    const displayTags = tagList.slice(0, 3);
-    const moreCount = tagList.length - 3;
-    const plainText = n.notesText || '';
 
+  list.innerHTML = folders.map((f, i) => {
+    const c = getFolderColor(f && f.id);
     return `
-    <div class="note-card fade-in" style="animation-delay:${i*0.06}s" onclick="openNoteDetail(${n.projectId})">
-      <div class="nimg-stack">${stackHtml}</div>
-      <div class="ntxt">
-        <div class="nct">${n.title || n.projectTitle || '无标题'}</div>
-        <div class="nce">${plainText.substring(0, 140) || '暂无内容'}</div>
-        <div class="nmeta">
-          <span class="nmi">${icons.camera} ${imgCount} 张截图</span>
-          <span class="ndot">·</span>
-          <span>${new Date(n.updatedAt).toLocaleDateString('zh-CN')}</span>
+    <div class="folder-card fade-in" style="animation-delay:${i*0.06}s" onclick="openProjectNotes(${f.id})">
+      <div class="folder-bg" style="background:linear-gradient(135deg,${c.start},${c.end})">
+        <div class="folder-papers">
+          <div class="folder-paper"></div>
+          <div class="folder-paper"></div>
+          <div class="folder-paper"></div>
         </div>
-        ${displayTags.length > 0 ? `<div class="ntr">${displayTags.map(t => { const c = tagColor(t); return `<span class="ntag" style="background:${c.bg};color:${c.text}">${t}</span>`; }).join('')}${moreCount > 0 ? `<span class="nmore">+${moreCount}</span>` : ''}</div>` : ''}
+        <div class="folder-bottom">
+          <div class="folder-info">
+            <div class="folder-name">${f.title}</div>
+            <div class="folder-count">${f.count} 个笔记</div>
+          </div>
+          <div class="folder-menu" onclick="event.stopPropagation()">
+            <span class="folder-menu-dots">•••</span>
+          </div>
+        </div>
       </div>
     </div>`;
   }).join('');
 }
 
-function updateNoteCount() {
-  const count = selectedNoteTag 
-    ? allNotes.filter(n => {
-        try {
-          const tags = JSON.parse(n.tags || '[]');
-          return tags.includes(selectedNoteTag);
-        } catch {
-          return false;
-        }
-      }).length
-    : allNotes.length;
-  document.getElementById('noteCount').textContent = `${count} 篇`;
-}
-
-// ===================== NOTE DETAIL =====================
-let currentImageIndex = 0;
-let isProcessingNewImport = false;
+// ===================== NOTE DETAIL (CONT.) =====================
 
 function openNoteDetail(projectId, isNewImport) {
   currentProjectId = projectId;
@@ -2092,6 +2209,28 @@ function createAndSelectProject() {
   renderSaveProjectList();
   selectSaveProjectById(project.id);
   closeNewProjectSheet();
+}
+
+function showNewFolderSheet() {
+  document.getElementById('newProjectOverlay').style.display = 'flex';
+  var input = document.getElementById('newProjectName');
+  input.value = '';
+  input.onkeydown = function(e) {
+    if (e.key === 'Enter') createFolderFromSheet();
+  };
+  setTimeout(function() { input.focus(); }, 100);
+}
+
+function createFolderFromSheet() {
+  var name = document.getElementById('newProjectName').value.trim();
+  if (!name) return;
+  var project = { id: Date.now(), title: name, createdAt: new Date().toISOString() };
+  projects.push(project);
+  projectImages[project.id] = [];
+  allNotes.push({ projectId: project.id, projectTitle: name, title: name, content: '', tags: '[]', imageUrls: [], imageOcrTexts: [] });
+  closeNewProjectSheet();
+  renderNotes();
+  openProjectNotes(project.id);
 }
 
 function renderSaveProjectList() {

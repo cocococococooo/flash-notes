@@ -297,8 +297,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingTop: 44,
-    paddingBottom: 12,
+    paddingTop: 30,
+    paddingBottom: 0,
     backgroundColor: "#FAFAFA",
     borderBottomWidth: 1,
     borderBottomColor: "#F0F0EE",
@@ -362,6 +362,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "#F0F0EE",
     justifyContent: "center",
     alignItems: "center",
+    marginTop: -40,
   },
   carouselImage: {
     width: SCREEN_WIDTH,
