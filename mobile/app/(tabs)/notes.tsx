@@ -163,7 +163,7 @@ export default function NotesScreen() {
           return (
             <TouchableOpacity
               style={styles.folderCard}
-              onPress={() => router.push(`/note/${item.id}`)}
+              onPress={() => router.push(`/project/${item.id}`)}
               activeOpacity={0.85}
             >
               <View style={[styles.folderBg, { backgroundColor: colors.start }]}>
