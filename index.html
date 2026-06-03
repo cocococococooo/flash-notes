@@ -2930,6 +2930,16 @@ function showOcrNotice(ocrFn) {
   document.getElementById('ocrNoticeOverlay').style.display = 'flex';
 }
 
+function cleanOcrText(text) {
+  if (!text) return text;
+  text = text.replace(/\s+/g, ' ');
+  text = text.replace(/[\u3000\xa0]+/g, ' ');
+  text = text.replace(/([\u4e00-\u9fff])\s+([\u4e00-\u9fff])/g, '$1$2');
+  text = text.replace(/([a-zA-Z])\s+([a-zA-Z])/g, '$1$2');
+  text = text.replace(/([^\w\s])\1+/g, '$1');
+  return text.trim();
+}
+
 function runTesseractOcr(imageUrl, index) {
   var ocrEl = document.getElementById('ncOcrText');
   var retryBtn = document.getElementById('ncOcrRetry');
@@ -2967,7 +2977,7 @@ function runTesseractOcr(imageUrl, index) {
   }).then(function(result) {
     if (timedOut) return;
     timedOut = true;
-    var text = result.data.text;
+    var text = cleanOcrText(result.data.text);
     ocrEl.textContent = text || '（未识别到文字）';
     isProcessingNewImport = false;
     if (retryBtn) retryBtn.style.display = 'flex';
@@ -2975,7 +2985,7 @@ function runTesseractOcr(imageUrl, index) {
     var note = allNotes.find(function(n) { return n.projectId === currentProjectId; });
     if (note) {
       if (!note.imageOcrTexts) note.imageOcrTexts = [];
-      note.imageOcrTexts[index] = text.trim();
+      note.imageOcrTexts[index] = text;
     }
   }).catch(function(err) {
     if (timedOut) return;
