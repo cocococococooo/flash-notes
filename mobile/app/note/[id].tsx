@@ -1058,7 +1058,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: "#52525B",
     paddingVertical: 0,
-    height: 120,
+    height: 200,
   },
   ncOcrRetry: {
     flexDirection: "row",
