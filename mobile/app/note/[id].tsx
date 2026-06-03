@@ -1053,7 +1053,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 22,
     color: "#52525B",
-    minHeight: 60,
+    minHeight: 150,
     paddingVertical: 0,
   },
   ncOcrRetry: {
