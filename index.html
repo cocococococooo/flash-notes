@@ -3027,28 +3027,6 @@ function runTesseractOcr(imageUrl, index) {
   };
   img.src = imageUrl;
 }
-    }
-  }).then(function(result) {
-    if (timedOut) return;
-    timedOut = true;
-    var text = cleanOcrText(result.data.text);
-    ocrEl.textContent = text || '（未识别到文字）';
-    isProcessingNewImport = false;
-    if (retryBtn) retryBtn.style.display = 'flex';
-
-    var note = allNotes.find(function(n) { return n.projectId === currentProjectId; });
-    if (note) {
-      if (!note.imageOcrTexts) note.imageOcrTexts = [];
-      note.imageOcrTexts[index] = text;
-    }
-  }).catch(function(err) {
-    if (timedOut) return;
-    timedOut = true;
-    ocrEl.textContent = '（识别失败: ' + (err.message || '未知错误') + '）';
-    isProcessingNewImport = false;
-    if (retryBtn) retryBtn.style.display = 'flex';
-  });
-}
 
 function noteCarouselGoTo(index) {
   const track = document.getElementById('noteCarouselTrack');
