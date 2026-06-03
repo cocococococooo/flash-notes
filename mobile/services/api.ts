@@ -108,4 +108,12 @@ export const api = {
       method: "PUT",
       body: JSON.stringify({ content, tags }),
     }),
+
+  createShareLink: (noteId: number) =>
+    request<{ id: number; token: string; url: string }>(`/notes/${noteId}/share`, {
+      method: "POST",
+    }),
+
+  deleteShareLink: (token: string) =>
+    request<void>(`/share/${token}`, { method: "DELETE" }),
 };

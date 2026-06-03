@@ -19,6 +19,12 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { api } from "../../services/api";
 import IconPark from "../../components/IconPark";
 import { API_BASE_URL } from "../../constants/config";
+import * as Clipboard from "expo-clipboard";
+import { captureRef } from "react-native-view-shot";
+import * as MediaLibrary from "expo-media-library";
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
+import Pdf from "react-native-pdf";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const WRAPPER_PADDING = 12;
@@ -98,6 +104,11 @@ export default function NoteScreen() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [tagModalVisible, setTagModalVisible] = useState(false);
   const [tagInputValue, setTagInputValue] = useState("");
+  const [shareModalVisible, setShareModalVisible] = useState(false);
+  const [previewShareImage, setPreviewShareImage] = useState<string | null>(null);
+  const [pdfUri, setPdfUri] = useState<string | null>(null);
+  const [showPdfPreview, setShowPdfPreview] = useState(false);
+  const captureRef = useRef<View>(null);
   const tagSlideAnim = useRef(new Animated.Value(300)).current;
 
   useEffect(() => {
@@ -210,7 +221,146 @@ export default function NoteScreen() {
   };
 
   const handleShare = () => {
-    Alert.alert("分享", "分享功能开发中...");
+    setShareModalVisible(true);
+  };
+
+  const handleShareLink = async () => {
+    try {
+      const result = await api.createShareLink(projectId);
+      await Clipboard.setStringAsync(result.url);
+      Alert.alert("已复制", "分享链接已复制到剪贴板");
+    } catch (e: any) {
+      Alert.alert("生成失败", e.message);
+    }
+  };
+
+  const handleShareImage = async () => {
+    try {
+      if (!captureRef.current) {
+        Alert.alert("错误", "无法截取内容");
+        return;
+      }
+      const uri = await captureRef(captureRef, {
+        format: "png",
+        quality: 1,
+      });
+      setPreviewShareImage(uri);
+    } catch (e: any) {
+      Alert.alert("截图失败", e.message);
+    }
+  };
+
+  const confirmSaveImage = async () => {
+    if (!previewShareImage) return;
+    try {
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("权限不足", "需要相册访问权限才能保存图片");
+        return;
+      }
+      await MediaLibrary.saveToLibraryAsync(previewShareImage);
+      Alert.alert("已保存", "图片已保存到相册");
+      setPreviewShareImage(null);
+    } catch (e: any) {
+      Alert.alert("保存失败", e.message);
+    }
+  };
+
+  const handleSharePdf = async () => {
+    try {
+      const html = generatePdfHtml();
+      const { uri } = await Print.printToFileAsync({ html });
+      setPdfUri(uri);
+      setShowPdfPreview(true);
+    } catch (e: any) {
+      Alert.alert("生成失败", e.message);
+    }
+  };
+
+  const generatePdfHtml = () => {
+    const imagesHtml = imageBlocks
+      .map((img) => `<img src="${API_BASE_URL}${img.src}" style="width:100%;border-radius:8px;margin:12px 0;" />`)
+      .join("");
+
+    const textHtml = textBlocks
+      .map((block) => {
+        switch (block.type) {
+          case "title":
+            return `<h1 style="font-size:24px;font-weight:700;margin-bottom:12px;color:#18181B;">${block.text}</h1>`;
+          case "subtitle":
+            return `<h2 style="font-size:20px;font-weight:600;margin-bottom:10px;color:#18181B;">${block.text}</h2>`;
+          case "heading":
+            return `<h3 style="font-size:18px;font-weight:600;margin-bottom:8px;color:#18181B;">${block.text}</h3>`;
+          case "listItem":
+            return `<li style="margin-bottom:4px;color:#52525B;">${block.text}</li>`;
+          default:
+            return `<p style="font-size:16px;line-height:1.8;margin-bottom:8px;color:#52525B;">${block.text}</p>`;
+        }
+      })
+      .join("");
+
+    const tagsHtml = note?.tags
+      ? (() => {
+          try {
+            const tags = JSON.parse(note.tags);
+            return tags.map((tag: string) => `<span style="display:inline-block;background:#F4F4F5;padding:4px 12px;border-radius:100px;margin:4px;font-size:13px;color:#18181B;">${tag}</span>`).join("");
+          } catch {
+            return "";
+          }
+        })()
+      : "";
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; padding: 20px; color: #333; }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+        </style>
+      </head>
+      <body>
+        ${imagesHtml}
+        ${textHtml}
+        <div style="margin-top:20px;">${tagsHtml}</div>
+      </body>
+      </html>
+    `;
+  };
+
+  const handleSavePdf = async () => {
+    if (!pdfUri) return;
+    try {
+      await Sharing.shareAsync(pdfUri, {
+        mimeType: "application/pdf",
+        dialogTitle: "保存PDF",
+      });
+      setShowPdfPreview(false);
+      setPdfUri(null);
+    } catch (e: any) {
+      Alert.alert("保存失败", e.message);
+    }
+  };
+
+  const handleShareOption = async (option: string) => {
+    setShareModalVisible(false);
+    const content = blocksToMarkdown(blocks);
+    switch (option) {
+      case "text":
+        await Clipboard.setStringAsync(content);
+        Alert.alert("已复制", "文字内容已复制到剪贴板");
+        break;
+      case "image":
+        handleShareImage();
+        break;
+      case "pdf":
+        handleSharePdf();
+        break;
+      case "link":
+        handleShareLink();
+        break;
+    }
   };
 
   const updateBlockText = (index: number, text: string) => {
@@ -315,8 +465,10 @@ export default function NoteScreen() {
         keyboardDismissMode="interactive"
         showsVerticalScrollIndicator={false}
       >
-        {/* Main Card Container */}
-        <View style={styles.mainCard}>
+        {/* Capture Area for Screenshot */}
+        <View ref={captureRef} style={styles.captureArea}>
+          {/* Main Card Container */}
+          <View style={styles.mainCard}>
           {/* Image Carousel Section */}
           {imageBlocks.length > 0 && (
             <View style={styles.carouselSection}>
@@ -443,6 +595,7 @@ export default function NoteScreen() {
             </View>
           </View>
         </View>
+        </View>
 
         {/* Dots Indicator */}
         {imageBlocks.length > 0 && (
@@ -525,6 +678,119 @@ export default function NoteScreen() {
           </Animated.View>
         </TouchableOpacity>
       </Modal>
+
+      {/* Share Bottom Sheet */}
+      <Modal visible={shareModalVisible} transparent animationType="none" onRequestClose={() => setShareModalVisible(false)}>
+        <TouchableOpacity
+          style={styles.shareSheetBg}
+          activeOpacity={1}
+          onPress={() => setShareModalVisible(false)}
+        >
+          <View style={styles.shareSheetCard}>
+            <View style={styles.shareSheetHandle} />
+            <Text style={styles.shareSheetTitle}>分享笔记</Text>
+            
+            <TouchableOpacity style={styles.shareOption} onPress={() => handleShareOption("text")}>
+              <View style={styles.shareOptionIcon}>
+                <IconPark name="document" size={20} color="#18181B" />
+              </View>
+              <View style={styles.shareOptionContent}>
+                <Text style={styles.shareOptionTitle}>纯文字</Text>
+                <Text style={styles.shareOptionDesc}>复制文字内容到剪贴板</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.shareOption} onPress={() => handleShareOption("image")}>
+              <View style={styles.shareOptionIcon}>
+                <IconPark name="image" size={20} color="#18181B" />
+              </View>
+              <View style={styles.shareOptionContent}>
+                <Text style={styles.shareOptionTitle}>图片</Text>
+                <Text style={styles.shareOptionDesc}>保存为图片到相册</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.shareOption} onPress={() => handleShareOption("pdf")}>
+              <View style={styles.shareOptionIcon}>
+                <IconPark name="file" size={20} color="#18181B" />
+              </View>
+              <View style={styles.shareOptionContent}>
+                <Text style={styles.shareOptionTitle}>PDF</Text>
+                <Text style={styles.shareOptionDesc}>导出为PDF文件</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.shareOption} onPress={() => handleShareOption("link")}>
+              <View style={styles.shareOptionIcon}>
+                <IconPark name="link" size={20} color="#18181B" />
+              </View>
+              <View style={styles.shareOptionContent}>
+                <Text style={styles.shareOptionTitle}>链接</Text>
+                <Text style={styles.shareOptionDesc}>复制分享链接</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.shareSheetCancel} onPress={() => setShareModalVisible(false)}>
+              <Text style={styles.shareSheetCancelText}>取消</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Image Preview Modal for Share */}
+      <Modal visible={!!previewShareImage} transparent animationType="fade">
+        <View style={styles.imagePreviewBg}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            onPress={() => setPreviewShareImage(null)}
+          />
+          <View style={styles.imagePreviewContainer}>
+            {previewShareImage && (
+              <Image source={{ uri: previewShareImage }} style={styles.imagePreview} resizeMode="contain" />
+            )}
+          </View>
+          <View style={styles.imagePreviewActions}>
+            <TouchableOpacity
+              style={[styles.imagePreviewBtn, styles.imagePreviewBtnSecondary]}
+              onPress={() => setPreviewShareImage(null)}
+            >
+              <Text style={[styles.imagePreviewBtnText, styles.imagePreviewBtnTextSecondary]}>取消</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.imagePreviewBtn, styles.imagePreviewBtnPrimary]}
+              onPress={confirmSaveImage}
+            >
+              <Text style={[styles.imagePreviewBtnText, styles.imagePreviewBtnTextPrimary]}>保存到相册</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* PDF Preview Modal */}
+      <Modal visible={showPdfPreview} transparent animationType="slide">
+        <View style={styles.pdfPreviewBg}>
+          <View style={styles.pdfPreviewHeader}>
+            <TouchableOpacity onPress={() => setShowPdfPreview(false)}>
+              <Text style={styles.pdfPreviewClose}>关闭</Text>
+            </TouchableOpacity>
+            <Text style={styles.pdfPreviewTitle}>PDF预览</Text>
+            <TouchableOpacity onPress={handleSavePdf}>
+              <Text style={styles.pdfPreviewSave}>保存</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.pdfPreviewContent}>
+            {pdfUri && (
+              <Pdf
+                source={{ uri: pdfUri, cache: true }}
+                style={styles.pdfView}
+                onLoadComplete={(numberOfPages) => {
+                  console.log(`PDF加载完成，共${numberOfPages}页`);
+                }}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -601,6 +867,11 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 40,
+  },
+
+  /* Capture Area for Screenshot */
+  captureArea: {
+    backgroundColor: "#F0F0F0",
   },
 
   /* Main Card Container */
@@ -929,5 +1200,165 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: "#FFFFFF",
+  },
+
+  /* Share Bottom Sheet */
+  shareSheetBg: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-end",
+  },
+  shareSheetCard: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 32,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  shareSheetHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#E4E4E7",
+    alignSelf: "center",
+    marginTop: 10,
+    marginBottom: 16,
+  },
+  shareSheetTitle: {
+    fontSize: 17,
+    fontWeight: "600",
+    color: "#18181B",
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  shareOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: "#F9F9F9",
+    borderRadius: 12,
+    marginBottom: 10,
+  },
+  shareOptionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 14,
+  },
+  shareOptionContent: {
+    flex: 1,
+  },
+  shareOptionTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#18181B",
+    marginBottom: 2,
+  },
+  shareOptionDesc: {
+    fontSize: 13,
+    color: "#71717A",
+  },
+  shareSheetCancel: {
+    marginTop: 8,
+    paddingVertical: 14,
+    alignItems: "center",
+    backgroundColor: "#F4F4F5",
+    borderRadius: 12,
+  },
+  shareSheetCancelText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#52525B",
+  },
+
+  /* Image Preview Modal */
+  imagePreviewBg: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.95)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  imagePreviewContainer: {
+    width: "90%",
+    height: "70%",
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  imagePreview: {
+    width: "100%",
+    height: "100%",
+  },
+  imagePreviewActions: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 20,
+  },
+  imagePreviewBtn: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 100,
+  },
+  imagePreviewBtnPrimary: {
+    backgroundColor: "#FFFFFF",
+  },
+  imagePreviewBtnSecondary: {
+    backgroundColor: "rgba(255,255,255,0.2)",
+  },
+  imagePreviewBtnText: {
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  imagePreviewBtnTextPrimary: {
+    color: "#18181B",
+  },
+  imagePreviewBtnTextSecondary: {
+    color: "#FFFFFF",
+  },
+
+  /* PDF Preview Modal */
+  pdfPreviewBg: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+  },
+  pdfPreviewHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ECECEE",
+  },
+  pdfPreviewClose: {
+    fontSize: 15,
+    color: "#52525B",
+    fontWeight: "500",
+  },
+  pdfPreviewTitle: {
+    fontSize: 17,
+    fontWeight: "600",
+    color: "#18181B",
+  },
+  pdfPreviewSave: {
+    fontSize: 15,
+    color: "#18181B",
+    fontWeight: "600",
+  },
+  pdfPreviewContent: {
+    flex: 1,
+  },
+  pdfView: {
+    flex: 1,
+    backgroundColor: "#F5F5F5",
   },
 });

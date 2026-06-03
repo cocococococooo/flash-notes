@@ -148,8 +148,7 @@ export default function NotesScreen() {
           onPress={() => setCreateModalVisible(true)}
           activeOpacity={0.7}
         >
-          <IconPark name="plus" size={16} color="#FFF" />
-          <Text style={styles.createBtnText}>新建文件夹</Text>
+          <IconPark name="plus" size={16} color="#3F3F46" />
         </TouchableOpacity>
       </View>
 
@@ -268,22 +267,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 12,
+    paddingBottom: 20,
   },
   title: { fontSize: 26, fontWeight: "700", color: "#18181B" },
   createBtn: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#18181B",
+    justifyContent: "center",
+    backgroundColor: "transparent",
+    borderWidth: 1.5,
+    borderColor: "#D4D4D8",
     borderRadius: 100,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    gap: 4,
-  },
-  createBtnText: {
-    color: "#FFF",
-    fontSize: 13,
-    fontWeight: "600",
+    width: 36,
+    height: 36,
+    padding: 0,
   },
   list: { paddingHorizontal: 16, paddingBottom: 100 },
   row: { justifyContent: "space-between" },

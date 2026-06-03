@@ -31,6 +31,7 @@ export default function ProjectDetailScreen() {
   const router = useRouter();
 
   const [images, setImages] = useState<ImageData[]>([]);
+  const [projectTitle, setProjectTitle] = useState("");
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -47,6 +48,18 @@ export default function ProjectDetailScreen() {
     }
   }, [projectId]);
 
+  const loadProjectTitle = useCallback(async () => {
+    try {
+      const projects = await api.listProjects();
+      const project = projects.find(p => p.id === projectId);
+      if (project) {
+        setProjectTitle(project.title);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, [projectId]);
+
   const startPolling = useCallback(() => {
     if (pollingRef.current) clearInterval(pollingRef.current);
     pollingRef.current = setInterval(async () => {
@@ -58,6 +71,7 @@ export default function ProjectDetailScreen() {
   }, [loadImages]);
 
   useEffect(() => {
+    loadProjectTitle();
     loadImages().then((data) => {
       setLoading(false);
       if (data && data.some((img) => img.status === "processing")) {
@@ -67,7 +81,7 @@ export default function ProjectDetailScreen() {
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
     };
-  }, [loadImages, startPolling]);
+  }, [loadImages, loadProjectTitle, startPolling]);
 
   const handleImport = async () => {
     try {
@@ -123,24 +137,21 @@ export default function ProjectDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
-          <IconPark name="arrowLeft" size={16} color="#18181B" />
-          <Text style={styles.backText}>返回</Text>
-        </View>
-      </TouchableOpacity>
-
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>
-          项目 #{projectId} · {images.length} 张图片
-        </Text>
+      <View style={styles.topBar}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
+            <IconPark name="arrowLeft" size={16} color="#18181B" />
+            <Text style={styles.backText}>返回</Text>
+          </View>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{projectTitle}</Text>
         <TouchableOpacity
           style={[styles.importBtn, uploading && styles.disabled]}
           onPress={handleImport}
           disabled={uploading}
         >
           <Text style={styles.importBtnText}>
-            {uploading ? "上传中..." : "从相册导入"}
+            {uploading ? "上传中..." : "导入"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -191,23 +202,36 @@ export default function ProjectDetailScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FAFAFA" },
   center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#FAFAFA" },
-  backBtn: { paddingHorizontal: 16, paddingTop: 56, paddingBottom: 4 },
-  backText: { fontSize: 15, color: "#18181B", fontWeight: "600" },
-  header: {
+  topBar: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: 56,
+    paddingBottom: 12,
+    backgroundColor: "#FAFAFA",
+    position: "relative",
   },
-  headerTitle: { fontSize: 15, color: "#A1A1AA", fontWeight: "500" },
+  backBtn: { paddingVertical: 8, zIndex: 1 },
+  backText: { fontSize: 15, color: "#18181B", fontWeight: "600" },
+  headerTitle: {
+    fontSize: 17,
+    fontWeight: "600",
+    color: "#18181B",
+    position: "absolute",
+    left: 0,
+    right: 0,
+    textAlign: "center",
+    paddingTop: 56,
+  },
   importBtn: {
     backgroundColor: "#18181B",
     borderRadius: 100,
-    paddingHorizontal: 18,
+    paddingHorizontal: 14,
     paddingVertical: 8,
+    zIndex: 1,
   },
-  importBtnText: { color: "#FFF", fontWeight: "600", fontSize: 14 },
+  importBtnText: { color: "#FFF", fontWeight: "600", fontSize: 13 },
   disabled: { opacity: 0.5 },
   list: { paddingHorizontal: 16, paddingBottom: 100 },
   emptyContainer: { alignItems: "center", marginTop: 80 },

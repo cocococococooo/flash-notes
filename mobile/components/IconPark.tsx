@@ -153,6 +153,30 @@ export default function IconPark({ name, size = 24, color = "#18181B" }: IconPro
           <Path d="M36 12L12 36" stroke={color} strokeWidth="4" strokeLinecap="round" />
         </Svg>
       );
+    case "document":
+      return (
+        <Svg width={size} height={size} viewBox="0 0 48 48" fill="none">
+          <Path d="M10 6H30L38 14V42C38 43.1 37.1 44 36 44H10C8.9 44 8 43.1 8 42V8C8 6.9 8.9 6 10 6Z" stroke={color} strokeWidth="4" strokeLinejoin="round" />
+          <Path d="M16 24H32" stroke={color} strokeWidth="4" strokeLinecap="round" />
+          <Path d="M16 32H28" stroke={color} strokeWidth="4" strokeLinecap="round" />
+          <Path d="M16 40H24" stroke={color} strokeWidth="4" strokeLinecap="round" />
+        </Svg>
+      );
+    case "file":
+      return (
+        <Svg width={size} height={size} viewBox="0 0 48 48" fill="none">
+          <Path d="M14 6H30L40 16V42C40 43.1 39.1 44 38 44H10C8.9 44 8 43.1 8 42V8C8 6.9 8.9 6 10 6H14Z" stroke={color} strokeWidth="4" strokeLinejoin="round" />
+          <Path d="M30 6V16H40" stroke={color} strokeWidth="4" strokeLinejoin="round" />
+        </Svg>
+      );
+    case "link":
+      return (
+        <Svg width={size} height={size} viewBox="0 0 48 48" fill="none">
+          <Path d="M20 28L28 20" stroke={color} strokeWidth="4" strokeLinecap="round" />
+          <Path d="M34 16C36.7614 13.2386 41.2386 13.2386 44 16C46.7614 18.7614 46.7614 23.2386 44 26L36 34" stroke={color} strokeWidth="4" strokeLinecap="round" />
+          <Path d="M14 34C11.2386 36.7614 6.76143 36.7614 4 34C1.23858 31.2386 1.23858 26.7614 4 24L12 16" stroke={color} strokeWidth="4" strokeLinecap="round" />
+        </Svg>
+      );
     case "refresh":
       return (
         <Svg width={size} height={size} viewBox="0 0 48 48" fill="none">

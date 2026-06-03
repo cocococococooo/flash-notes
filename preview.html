@@ -532,7 +532,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 24px 20px 18px;
+    padding: 24px 20px 26px;
   }
   .notes-header-left {
     display: flex;
@@ -551,16 +551,17 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--text-primary);
-    color: #FFF;
-    border: none;
+    background: transparent;
+    color: #3F3F46;
+    border: 1.5px solid #D4D4D8;
     border-radius: 50%;
     width: 36px;
     height: 36px;
+    padding: 0;
     cursor: pointer;
     transition: all 0.2s;
   }
-  .create-folder-btn:hover { background: #333; }
+  .create-folder-btn:hover { border-color: #A1A1AA; }
   .create-folder-btn:active { transform: scale(0.95); }
   .create-folder-btn span { display: inline-flex; align-items: center; justify-content: center; }
   .create-folder-btn span svg { width: 18px; height: 18px; }
@@ -794,7 +795,15 @@
   }
   .overlay-topbar .back:hover { opacity: 0.5; }
   .overlay-topbar .back svg { width: 16px; height: 16px; }
-  .overlay-topbar .o-title { flex: 1; font-size: 14px; color: var(--text-tertiary); font-weight: 500; }
+  .overlay-topbar .o-title { 
+    position: absolute;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 17px; 
+    color: #18181B; 
+    font-weight: 600; 
+  }
   .overlay-topbar .o-action {
     background: var(--text-primary); color: #FFF; border: none;
     border-radius: 100px; padding: 8px 18px; font-size: 13px;
@@ -1153,6 +1162,63 @@
     display: flex; align-items: center; justify-content: center;
     color: var(--text-tertiary); font-size: 15px;
   }
+
+  /* Share Bottom Sheet */
+  .share-sheet-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 9999;
+    animation: fadeIn 0.2s ease;
+  }
+  .share-sheet-overlay.open { display: block; }
+  .share-sheet {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #FFF;
+    border-radius: 20px 20px 0 0;
+    padding: 0 20px 32px;
+    animation: slideUp 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .share-sheet-handle {
+    width: 36px; height: 4px; border-radius: 2px;
+    background: #E4E4E7; margin: 10px auto 0;
+  }
+  .share-sheet-title {
+    font-size: 17px; font-weight: 600; color: #18181B;
+    text-align: center; padding: 16px 0 20px;
+  }
+  .share-option {
+    display: flex; align-items: center;
+    padding: 14px 16px; background: #F9F9F9;
+    border-radius: 12px; margin-bottom: 10px;
+    cursor: pointer; transition: background 0.15s;
+    border: none; width: 100%; text-align: left;
+    font-family: inherit;
+  }
+  .share-option:hover { background: #F0F0F0; }
+  .share-option:active { transform: scale(0.98); }
+  .share-option-icon {
+    width: 40px; height: 40px; border-radius: 20px;
+    background: #FFF; display: flex; align-items: center;
+    justify-content: center; margin-right: 14px;
+    flex-shrink: 0;
+  }
+  .share-option-icon svg { width: 20px; height: 20px; color: #18181B; }
+  .share-option-content { flex: 1; }
+  .share-option-title { font-size: 15px; font-weight: 600; color: #18181B; margin-bottom: 2px; }
+  .share-option-desc { font-size: 13px; color: #71717A; }
+  .share-sheet-cancel {
+    margin-top: 8px; padding: 14px; text-align: center;
+    background: #F4F4F5; border-radius: 12px;
+    font-size: 15px; font-weight: 600; color: #52525B;
+    cursor: pointer; border: none; width: 100%;
+    font-family: inherit; transition: background 0.15s;
+  }
+  .share-sheet-cancel:hover { background: #E8E8EA; }
 
   /* ===== NOTE DETAIL OVERLAY ===== */
   #overlay-note {
@@ -1546,7 +1612,7 @@
       <button class="back" onclick="closeOverlay('overlay-project-notes')">
         <span data-icon="arrowLeft" style="margin-right:4px"></span>返回
       </button>
-      <span class="o-title" id="projectNotesTitle">项目</span>
+      <span class="o-title" id="projectNotesTitle" style="color:#18181B;font-weight:600"></span>
       <span></span>
     </div>
     <div class="overlay-scroll">
@@ -1563,7 +1629,7 @@
       <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
         <button class="note-next-btn" id="noteNextBtn" onclick="goNextImage()">下一张</button>
         <button class="note-save-btn" id="noteSaveBtn" style="display:none" onclick="openSaveModal()">保存</button>
-        <button class="note-share-icon" onclick="alert('分享功能开发中...')">
+        <button class="note-share-icon" onclick="openShareSheet()">
           <span data-icon="share"></span>
         </button>
       </div>
@@ -1602,6 +1668,56 @@
   <div class="viewer-overlay" id="viewer">
     <button class="close-v" onclick="closeViewer()">关闭</button>
     <div class="v-content"><span data-icon="notes" style="margin-right:8px;opacity:0.6"></span> 图片预览 (模拟)</div>
+  </div>
+
+  <!-- Share Bottom Sheet -->
+  <div class="share-sheet-overlay" id="shareSheet" onclick="closeShareSheet()">
+    <div class="share-sheet" onclick="event.stopPropagation()">
+      <div class="share-sheet-handle"></div>
+      <div class="share-sheet-title">分享笔记</div>
+      
+      <button class="share-option" onclick="handleShareOption('text')">
+        <div class="share-option-icon">
+          <span data-icon="document"></span>
+        </div>
+        <div class="share-option-content">
+          <div class="share-option-title">纯文字</div>
+          <div class="share-option-desc">复制文字内容到剪贴板</div>
+        </div>
+      </button>
+
+      <button class="share-option" onclick="handleShareOption('image')">
+        <div class="share-option-icon">
+          <span data-icon="image"></span>
+        </div>
+        <div class="share-option-content">
+          <div class="share-option-title">图片</div>
+          <div class="share-option-desc">保存为图片到相册</div>
+        </div>
+      </button>
+
+      <button class="share-option" onclick="handleShareOption('pdf')">
+        <div class="share-option-icon">
+          <span data-icon="file"></span>
+        </div>
+        <div class="share-option-content">
+          <div class="share-option-title">PDF</div>
+          <div class="share-option-desc">导出为PDF文件</div>
+        </div>
+      </button>
+
+      <button class="share-option" onclick="handleShareOption('link')">
+        <div class="share-option-icon">
+          <span data-icon="link"></span>
+        </div>
+        <div class="share-option-content">
+          <div class="share-option-title">链接</div>
+          <div class="share-option-desc">复制分享链接</div>
+        </div>
+      </button>
+
+      <button class="share-sheet-cancel" onclick="closeShareSheet()">取消</button>
+    </div>
   </div>
 
   <!-- OCR First-time Notice -->
@@ -1714,6 +1830,8 @@ const icons = {
   redo: '<svg class="icon-svg" width="20" height="20" viewBox="0 0 48 48" fill="none"><path d="M40 22H18C11.373 22 6 27.373 6 34C6 40.627 11.373 46 18 46H24" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><path d="M32 14L40 22L32 30" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   refresh: '<svg class="icon-svg" width="16" height="16" viewBox="0 0 48 48" fill="none"><path d="M38 24C38 31.732 31.732 38 24 38C16.268 38 10 31.732 10 24C10 16.268 16.268 10 24 10C28.97 10 33.258 12.624 35.696 16.58" stroke="#52525B" stroke-width="4" stroke-linecap="round"/><path d="M38 10V18H30" stroke="#52525B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   image: '<svg class="icon-svg" width="20" height="20" viewBox="0 0 48 48" fill="none"><rect x="6" y="6" width="36" height="36" rx="4" stroke="currentColor" stroke-width="4"/><circle cx="16" cy="16" r="4" stroke="currentColor" stroke-width="4"/><path d="M6 34L16 24L24 32L32 22L42 34" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  document: '<svg class="icon-svg" width="20" height="20" viewBox="0 0 48 48" fill="none"><path d="M10 6H30L38 14V42C38 43.1 37.1 44 36 44H10C8.9 44 8 43.1 8 42V8C8 6.9 8.9 6 10 6Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M16 24H32" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><path d="M16 32H28" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><path d="M16 40H24" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>',
+  file: '<svg class="icon-svg" width="20" height="20" viewBox="0 0 48 48" fill="none"><path d="M14 6H30L40 16V42C40 43.1 39.1 44 38 44H10C8.9 44 8 43.1 8 42V8C8 6.9 8.9 6 10 6H14Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M30 6V16H40" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/></svg>',
   list: '<svg class="icon-svg" width="20" height="20" viewBox="0 0 48 48" fill="none"><path d="M14 12H42" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><path d="M14 24H42" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><path d="M14 36H42" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><circle cx="6" cy="12" r="2" fill="currentColor"/><circle cx="6" cy="24" r="2" fill="currentColor"/><circle cx="6" cy="36" r="2" fill="currentColor"/></svg>',
 };
 
@@ -3026,6 +3144,47 @@ function toggleNoteTags(el) {
 
 function openViewer() { document.getElementById('viewer').classList.add('open'); }
 function closeViewer() { document.getElementById('viewer').classList.remove('open'); }
+
+// Share Sheet
+function openShareSheet() { document.getElementById('shareSheet').classList.add('open'); }
+function closeShareSheet() { document.getElementById('shareSheet').classList.remove('open'); }
+
+async function handleShareOption(option) {
+  closeShareSheet();
+  
+  switch (option) {
+    case 'text':
+      // 复制纯文本到剪贴板
+      const textContent = getCurrentNoteText();
+      await navigator.clipboard.writeText(textContent);
+      alert('已复制', '文字内容已复制到剪贴板');
+      break;
+      
+    case 'image':
+      // 截图功能
+      alert('提示', '请在手机App中使用图片分享功能');
+      break;
+      
+    case 'pdf':
+      // PDF功能
+      alert('提示', '请在手机App中使用PDF分享功能');
+      break;
+      
+    case 'link':
+      // 复制分享链接
+      const link = window.location.href;
+      await navigator.clipboard.writeText(link);
+      alert('已复制', '分享链接已复制到剪贴板');
+      break;
+  }
+}
+
+function getCurrentNoteText() {
+  // 获取当前笔记的文本内容
+  const title = document.getElementById('ncImageTitle')?.textContent || '';
+  const content = document.getElementById('ncOcrText')?.textContent || '';
+  return `${title}\n\n${content}`;
+}
 </script>
 
 </body>

@@ -47,3 +47,15 @@ class Note(Base):
     updatedAt = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
     project = relationship("Project", back_populates="note")
+
+
+class ShareLink(Base):
+    __tablename__ = "share_links"
+
+    id = Column(Integer, primary_key=True, index=True)
+    noteId = Column(Integer, ForeignKey("notes.id"), nullable=False)
+    token = Column(String(64), unique=True, nullable=False, index=True)
+    createdAt = Column(DateTime, default=datetime.datetime.utcnow)
+    expiresAt = Column(DateTime, nullable=True)
+
+    note = relationship("Note")
