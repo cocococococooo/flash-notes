@@ -1052,14 +1052,13 @@ const styles = StyleSheet.create({
   /* OCR Section */
   ncOcrSection: {
     marginBottom: 8,
-    flex: 1,
   },
   ncOcrText: {
     fontSize: 14,
     lineHeight: 20,
     color: "#52525B",
     paddingVertical: 0,
-    flex: 1,
+    height: 120,
   },
   ncOcrRetry: {
     flexDirection: "row",
