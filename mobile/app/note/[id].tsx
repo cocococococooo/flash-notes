@@ -470,7 +470,7 @@ export default function NoteScreen() {
           {/* Main Card Container */}
           <View style={styles.mainCard}>
           {/* Image Carousel Section */}
-          {imageBlocks.length > 0 && (
+          {imageBlocks.length > 0 ? (
             <View style={styles.carouselSection}>
               <View style={styles.carouselContainer}>
                 <Animated.FlatList
@@ -498,6 +498,12 @@ export default function NoteScreen() {
                   keyExtractor={(item, index) => `image-${index}`}
                 />
               </View>
+            </View>
+          ) : (
+            <View style={styles.emptyImageContainer}>
+              <IconPark name="camera" size={40} color="#A1A1AA" />
+              <Text style={styles.emptyImageText}>暂无截图</Text>
+              <Text style={styles.emptyImageHint}>导入截图后会在这里展示</Text>
             </View>
           )}
 
@@ -896,6 +902,25 @@ const styles = StyleSheet.create({
   },
   carouselContent: {
     alignItems: "center",
+  },
+  emptyImageContainer: {
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT,
+    backgroundColor: "#E5E5E5",
+    borderRadius: 17,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  emptyImageText: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#71717A",
+    marginTop: 12,
+  },
+  emptyImageHint: {
+    fontSize: 13,
+    color: "#A1A1AA",
+    marginTop: 6,
   },
   imageCard: {
     width: CARD_WIDTH,

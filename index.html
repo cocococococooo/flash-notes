@@ -2452,13 +2452,21 @@ function renderCurrentImage(note) {
 
   // Render card carousel
   var trackHtml = '';
-  imgUrls.forEach(function(url, idx) {
-    var isActive = idx === i;
-    trackHtml += '<div class="note-card-item' + (isActive ? ' active' : '') + '" data-index="' + idx + '">';
-    trackHtml += '<img src="' + url + '" />';
-    trackHtml += '<div class="card-badge">' + (idx + 1) + '</div>';
-    trackHtml += '</div>';
-  });
+  if (imgUrls.length === 0) {
+    trackHtml = '<div class="note-card-item empty-state" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px">' +
+      '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#A1A1AA" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>' +
+      '<div style="font-size:16px;font-weight:500;color:#71717A">暂无截图</div>' +
+      '<div style="font-size:13px;color:#A1A1AA">导入截图后会在这里展示</div>' +
+    '</div>';
+  } else {
+    imgUrls.forEach(function(url, idx) {
+      var isActive = idx === i;
+      trackHtml += '<div class="note-card-item' + (isActive ? ' active' : '') + '" data-index="' + idx + '">';
+      trackHtml += '<img src="' + url + '" />';
+      trackHtml += '<div class="card-badge">' + (idx + 1) + '</div>';
+      trackHtml += '</div>';
+    });
+  }
   document.getElementById('noteCardTrack').innerHTML = trackHtml;
 
   // Render dots
