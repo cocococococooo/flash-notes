@@ -2936,8 +2936,33 @@ function cleanOcrText(text) {
   text = text.replace(/[\u3000\xa0]+/g, ' ');
   text = text.replace(/([\u4e00-\u9fff])\s+([\u4e00-\u9fff])/g, '$1$2');
   text = text.replace(/([a-zA-Z])\s+([a-zA-Z])/g, '$1$2');
-  text = text.replace(/([^\w\s])\1+/g, '$1');
+  text = text.replace(/([^\w\s\u4e00-\u9fff])\1+/g, '$1');
+  text = text.replace(/(?<=[\u4e00-\u9fff])\.(?=[\u4e00-\u9fff])/g, '。');
+  text = text.replace(/(?<=[\u4e00-\u9fff]),(?=[\u4e00-\u9fff])/g, '，');
+  text = text.replace(/(?<=[\u4e00-\u9fff]):(?=[\u4e00-\u9fff])/g, '：');
+  text = text.replace(/(?<=[\u4e00-\u9fff]);(?=[\u4e00-\u9fff])/g, '；');
   return text.trim();
+}
+
+function preprocessImage(img) {
+  return new Promise(function(resolve) {
+    var canvas = document.createElement('canvas');
+    var ctx = canvas.getContext('2d');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    ctx.drawImage(img, 0, 0);
+    var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    var data = imageData.data;
+    for (var i = 0; i < data.length; i += 4) {
+      var gray = data[i] * 0.299 + data[i+1] * 0.587 + data[i+2] * 0.114;
+      var threshold = gray > 140 ? 255 : 0;
+      data[i] = threshold;
+      data[i+1] = threshold;
+      data[i+2] = threshold;
+    }
+    ctx.putImageData(imageData, 0, 0);
+    resolve(canvas.toDataURL('image/png'));
+  });
 }
 
 function runTesseractOcr(imageUrl, index) {
@@ -2962,17 +2987,47 @@ function runTesseractOcr(imageUrl, index) {
     }
   }, 120000);
 
-  Tesseract.recognize(imageUrl, 'eng+chi_sim', {
-    logger: function(m) {
-      if (timedOut) return;
-      if (m.status === 'loading language traineddata') {
-        ocrEl.innerHTML = '<span class="ocr-loading">正在下载中文语言包...</span>';
-      } else if (m.status === 'initializing api') {
-        ocrEl.innerHTML = '<span class="ocr-loading">正在初始化识别引擎...</span>';
-      } else if (m.status === 'recognizing text') {
-        var pct = Math.round(m.progress * 100);
-        ocrEl.innerHTML = '<span class="ocr-loading">正在识别文字... ' + pct + '%</span>';
-      }
+  var img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = function() {
+    preprocessImage(img).then(function(processedUrl) {
+      Tesseract.recognize(processedUrl, 'chi_sim', {
+        logger: function(m) {
+          if (timedOut) return;
+          if (m.status === 'loading language traineddata') {
+            ocrEl.innerHTML = '<span class="ocr-loading">正在下载中文语言包...</span>';
+          } else if (m.status === 'initializing api') {
+            ocrEl.innerHTML = '<span class="ocr-loading">正在初始化识别引擎...</span>';
+          } else if (m.status === 'recognizing text') {
+            var pct = Math.round(m.progress * 100);
+            ocrEl.innerHTML = '<span class="ocr-loading">正在识别文字... ' + pct + '%</span>';
+          }
+        },
+        tessedit_char_whitelist: '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ\u4e00-\u9fff\u3000-\u303f\uff00-\uffef，。！？、；：""''（）【】《》—…·',
+      }).then(function(result) {
+        if (timedOut) return;
+        timedOut = true;
+        var text = cleanOcrText(result.data.text);
+        ocrEl.textContent = text || '（未识别到文字）';
+        isProcessingNewImport = false;
+        if (retryBtn) retryBtn.style.display = 'flex';
+
+        var note = allNotes.find(function(n) { return n.projectId === currentProjectId; });
+        if (note) {
+          if (!note.imageOcrTexts) note.imageOcrTexts = [];
+          note.imageOcrTexts[index] = text;
+        }
+      }).catch(function(err) {
+        if (timedOut) return;
+        timedOut = true;
+        ocrEl.textContent = '（识别失败: ' + (err.message || '未知错误') + '）';
+        isProcessingNewImport = false;
+        if (retryBtn) retryBtn.style.display = 'flex';
+      });
+    });
+  };
+  img.src = imageUrl;
+}
     }
   }).then(function(result) {
     if (timedOut) return;
