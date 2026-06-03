@@ -29,7 +29,7 @@ import Pdf from "react-native-pdf";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const WRAPPER_PADDING = 12;
 const CARD_WIDTH = SCREEN_WIDTH - WRAPPER_PADDING * 2;
-const CARD_HEIGHT = CARD_WIDTH * 1.4;
+const CARD_HEIGHT = CARD_WIDTH * 0.75;
 const CARD_SPACING = 12;
 
 interface Note {
@@ -407,7 +407,7 @@ export default function NoteScreen() {
           onPress={() => setPreviewImage(item.src!)}
           style={styles.card}
         >
-          <Image source={{ uri: item.src }} style={styles.cardImage} />
+          <Image source={{ uri: item.src }} style={styles.cardImage} resizeMode="contain" />
           <View style={styles.cardOverlay} />
           <View style={styles.cardBadge}>
             <Text style={styles.cardBadgeText}>{index + 1}</Text>
@@ -923,10 +923,10 @@ const styles = StyleSheet.create({
   },
   card: {
     width: CARD_WIDTH,
-    height: CARD_WIDTH * 1.5,
+    height: CARD_HEIGHT,
     borderRadius: 17,
     overflow: "hidden",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#E5E5E5",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 0.602187 },
     shadowOpacity: 0.08,
