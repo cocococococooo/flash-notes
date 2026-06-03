@@ -1251,7 +1251,7 @@
     position: relative;
     cursor: pointer;
     transition: transform 0.3s, box-shadow 0.3s, opacity 0.3s;
-    aspect-ratio: 2/3;
+    aspect-ratio: 4/3;
   }
   .note-card-item.active {
     opacity: 1;
@@ -1447,6 +1447,21 @@
     margin-bottom: 24px;
   }
 
+  .ocr-loading {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-tertiary);
+  }
+  .ocr-loading::before {
+    content: '';
+    width: 14px; height: 14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
   /* ===== ANIMATIONS ===== */
   .fade-in { animation: fadeUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
   @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
@@ -1587,6 +1602,24 @@
   <div class="viewer-overlay" id="viewer">
     <button class="close-v" onclick="closeViewer()">关闭</button>
     <div class="v-content"><span data-icon="notes" style="margin-right:8px;opacity:0.6"></span> 图片预览 (模拟)</div>
+  </div>
+
+  <!-- OCR First-time Notice -->
+  <div class="bottom-sheet-overlay" id="ocrNoticeOverlay" style="display:none" onclick="closeOcrNotice()">
+    <div class="bottom-sheet" onclick="event.stopPropagation()" style="text-align:center">
+      <div class="bottom-sheet-handle"></div>
+      <div style="padding:20px 0 8px">
+        <div style="width:56px;height:56px;border-radius:50%;background:#F4F4F5;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px">
+          <svg width="28" height="28" viewBox="0 0 48 48" fill="none"><path d="M10 6H30L38 14V42C38 43.1 37.1 44 36 44H10C8.9 44 8 43.1 8 42V8C8 6.9 8.9 6 10 6Z" stroke="#18181B" stroke-width="3" stroke-linejoin="round"/><path d="M16 24H30" stroke="#18181B" stroke-width="3" stroke-linecap="round"/><path d="M16 30H30" stroke="#18181B" stroke-width="3" stroke-linecap="round"/></svg>
+        </div>
+        <div style="font-size:17px;font-weight:700;color:var(--text-primary);margin-bottom:8px">首次使用需要下载语言包</div>
+        <div style="font-size:13px;color:var(--text-tertiary);line-height:1.6;padding:0 10px">OCR 识别引擎需要下载中文语言数据（约 20MB），<br>下载后会缓存在浏览器中，后续使用无需重复下载。</div>
+      </div>
+      <div class="bottom-sheet-actions" style="margin-top:16px">
+        <button class="bottom-sheet-cancel-btn" onclick="closeOcrNotice()">取消</button>
+        <button class="bottom-sheet-confirm-btn" onclick="startOcrAfterNotice()">开始识别</button>
+      </div>
+    </div>
   </div>
 
   <!-- Tag input floating layer -->
@@ -1820,6 +1853,49 @@ function getFolderColor(id) {
   return fc[Math.abs(hash) % fc.length];
 }
 
+// ===================== RECENT NOTES =====================
+function trackRecentNote(noteId, title) {
+  var recent = JSON.parse(localStorage.getItem('recentNotes') || '[]');
+  recent = recent.filter(function(r) { return r.id !== noteId; });
+  recent.unshift({ id: noteId, title: title, time: Date.now() });
+  if (recent.length > 10) recent = recent.slice(0, 10);
+  localStorage.setItem('recentNotes', JSON.stringify(recent));
+}
+
+function getRecentNotes(count) {
+  var recent = JSON.parse(localStorage.getItem('recentNotes') || '[]');
+  return recent.slice(0, count || 3);
+}
+
+function renderRecentNotes() {
+  var list = document.getElementById('projectList');
+  var recent = getRecentNotes(3);
+  if (recent.length === 0) {
+    list.innerHTML = '<div class="empty-projects"><div class="ep-t">暂无最近访问</div><div class="ep-h">打开笔记后会显示在这里</div></div>';
+    return;
+  }
+  list.innerHTML = recent.map(function(r, i) {
+    var note = allNotes.find(function(n) { return n.projectId === r.id; });
+    var imgCount = note ? (note.imageUrls || []).length : 0;
+    return '<div class="project-card fade-in" style="animation-delay:' + (i * 0.05) + 's" onclick="openNoteDetail(' + r.id + ')">' +
+      '<div class="pci">' + icons.image + '</div>' +
+      '<div class="pcb">' +
+        '<div class="pct">' + (r.title || '笔记') + '</div>' +
+        '<div class="pcd">' + imgCount + ' 张图片 · ' + formatTime(r.time) + '</div>' +
+      '</div>' +
+      '<span class="pca">' + icons.arrowRight + '</span>' +
+    '</div>';
+  }).join('');
+}
+
+function formatTime(ts) {
+  var diff = Date.now() - ts;
+  if (diff < 60000) return '刚刚';
+  if (diff < 3600000) return Math.floor(diff / 60000) + ' 分钟前';
+  if (diff < 86400000) return Math.floor(diff / 3600000) + ' 小时前';
+  return new Date(ts).toLocaleDateString('zh-CN');
+}
+
 function updateNoteCount() {
   // No-op: count is updated in renderNotes
 }
@@ -1911,21 +1987,7 @@ function switchTab(index) {
 
 // ===================== HOME PAGE =====================
 function renderProjects() {
-  const list = document.getElementById('projectList');
-  if (projects.length === 0) {
-    list.innerHTML = `<div class="empty-projects"><div class="ep-icon">${icons.write}</div><div class="ep-t">还没有学习项目</div><div class="ep-h">当前暂无学习项目</div></div>`;
-    return;
-  }
-  list.innerHTML = projects.map((p, i) => `
-    <div class="project-card fade-in" style="animation-delay:${i*0.05}s" onclick="openProject(${p.id})">
-      <div class="pci">${icons.folder}</div>
-      <div class="pcb">
-        <div class="pct">${p.title}</div>
-        <div class="pcd">${new Date(p.createdAt).toLocaleDateString('zh-CN')}</div>
-      </div>
-      <span class="pca">${icons.arrowRight}</span>
-    </div>
-  `).join('');
+  renderRecentNotes();
 }
 
 function handleAddNote() {
@@ -1954,6 +2016,7 @@ function closeOverlay(id) {
   if (id === 'overlay-note') {
     renderNotes();
     updateNoteCount();
+    renderRecentNotes();
   }
 }
 
@@ -2208,6 +2271,11 @@ function openNoteDetail(projectId, isNewImport) {
   isProcessingNewImport = !!isNewImport;
   var note = allNotes.find(function(n) { return n.projectId === projectId; });
 
+  // Track recent note
+  if (note) {
+    trackRecentNote(projectId, note.title || note.projectTitle || '笔记');
+  }
+
   var nextBtn = document.getElementById('noteNextBtn');
   var saveBtn = document.getElementById('noteSaveBtn');
 
@@ -2291,7 +2359,7 @@ function renderCurrentImage(note) {
   renderTextContent(note, i);
 
   if (isProcessingNewImport) {
-    runTesseractOcr(imgUrls[i], i);
+    showOcrNotice(function() { runTesseractOcr(imgUrls[i], i); });
   }
 }
 
@@ -2313,7 +2381,7 @@ function renderTextContent(note, idx) {
   var ocrEl = document.getElementById('ncOcrText');
   var retryBtn = document.getElementById('ncOcrRetry');
   if (isProcessingNewImport && !ocrText) {
-    ocrEl.innerHTML = '<span class="ocr-loading">Processing OCR...</span>';
+    ocrEl.innerHTML = '<span class="ocr-loading">正在准备识别...</span>';
     if (retryBtn) retryBtn.style.display = 'none';
   } else {
     ocrEl.textContent = ocrText || '';
@@ -2530,7 +2598,7 @@ function retryOcr(index) {
   isProcessingNewImport = true;
   var imgUrls = note.imageUrls || [];
   renderTextContent(note, index);
-  runTesseractOcr(imgUrls[index], index);
+  showOcrNotice(function() { runTesseractOcr(imgUrls[index], index); });
 }
 
 // ===================== SAVE MODAL =====================
@@ -2718,6 +2786,28 @@ function selectSaveProjectById(id) {
   });
 }
 
+function closeOcrNotice() {
+  document.getElementById('ocrNoticeOverlay').style.display = 'none';
+}
+
+function startOcrAfterNotice() {
+  document.getElementById('ocrNoticeOverlay').style.display = 'none';
+  localStorage.setItem('ocrNoticeSeen', '1');
+  if (window._pendingOcrFn) {
+    window._pendingOcrFn();
+    window._pendingOcrFn = null;
+  }
+}
+
+function showOcrNotice(ocrFn) {
+  if (localStorage.getItem('ocrNoticeSeen') === '1') {
+    ocrFn();
+    return;
+  }
+  window._pendingOcrFn = ocrFn;
+  document.getElementById('ocrNoticeOverlay').style.display = 'flex';
+}
+
 function runTesseractOcr(imageUrl, index) {
   var ocrEl = document.getElementById('ncOcrText');
   var retryBtn = document.getElementById('ncOcrRetry');
@@ -2727,32 +2817,36 @@ function runTesseractOcr(imageUrl, index) {
   }
 
   if (retryBtn) retryBtn.style.display = 'none';
-  ocrEl.innerHTML = '<span class="ocr-loading">Processing OCR...</span>';
+  ocrEl.innerHTML = '<span class="ocr-loading">正在加载语言包，请稍候...</span>';
 
   var timedOut = false;
 
   setTimeout(function() {
     if (!timedOut) {
       timedOut = true;
-      ocrEl.textContent = '（Recognition timeout, please retry）';
+      ocrEl.textContent = '（识别超时，请点击重试）';
       isProcessingNewImport = false;
       if (retryBtn) retryBtn.style.display = 'flex';
     }
-  }, 30000);
+  }, 120000);
 
-  Tesseract.recognize(imageUrl, 'eng', {
+  Tesseract.recognize(imageUrl, 'eng+chi_sim', {
     logger: function(m) {
       if (timedOut) return;
-      if (m.status === 'recognizing text') {
+      if (m.status === 'loading language traineddata') {
+        ocrEl.innerHTML = '<span class="ocr-loading">正在下载中文语言包...</span>';
+      } else if (m.status === 'initializing api') {
+        ocrEl.innerHTML = '<span class="ocr-loading">正在初始化识别引擎...</span>';
+      } else if (m.status === 'recognizing text') {
         var pct = Math.round(m.progress * 100);
-        ocrEl.innerHTML = '<span class="ocr-loading">Recognizing... ' + pct + '%</span>';
+        ocrEl.innerHTML = '<span class="ocr-loading">正在识别文字... ' + pct + '%</span>';
       }
     }
   }).then(function(result) {
     if (timedOut) return;
     timedOut = true;
     var text = result.data.text;
-    ocrEl.textContent = text || '（No text detected）';
+    ocrEl.textContent = text || '（未识别到文字）';
     isProcessingNewImport = false;
     if (retryBtn) retryBtn.style.display = 'flex';
 
@@ -2764,7 +2858,7 @@ function runTesseractOcr(imageUrl, index) {
   }).catch(function(err) {
     if (timedOut) return;
     timedOut = true;
-    ocrEl.textContent = '（OCR failed: ' + (err.message || 'unknown error') + '）';
+    ocrEl.textContent = '（识别失败: ' + (err.message || '未知错误') + '）';
     isProcessingNewImport = false;
     if (retryBtn) retryBtn.style.display = 'flex';
   });
