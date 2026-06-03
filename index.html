@@ -1383,13 +1383,20 @@
   .nc-ocr-section {
     margin-bottom: 16px;
   }
+  .nc-ocr-wrapper {
+    height: 150px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    background: #FAFAFA;
+  }
   .nc-ocr-text {
     font-size: 14px;
     line-height: 1.6;
     color: #52525B;
     outline: none;
-    height: 150px;
-    overflow-y: auto;
+    margin: 0;
   }
   .nc-ocr-text:empty:before {
     content: attr(data-placeholder);
@@ -1647,7 +1654,9 @@
           </div>
           <h3 class="nc-heading-title" id="ncImageTitle" contenteditable="true">Image title</h3>
           <div class="nc-ocr-section">
-            <p class="nc-ocr-text" id="ncOcrText" contenteditable="true">OCR text content...</p>
+            <div class="nc-ocr-wrapper">
+              <p class="nc-ocr-text" id="ncOcrText" contenteditable="true">OCR text content...</p>
+            </div>
             <button class="nc-ocr-retry" id="ncOcrRetry" onclick="retryOcr(currentImageIndex)">
               <span data-icon="refresh"></span>重新识别
             </button>

@@ -545,28 +545,30 @@ export default function NoteScreen() {
 
             {/* OCR Section */}
             <View style={styles.ncOcrSection}>
-              {textBlocks.filter(b => b.type !== "title").length > 0 ? (
-                textBlocks.filter(b => b.type !== "title").map((block, i) => (
+              <View style={styles.ncOcrWrapper}>
+                {textBlocks.filter(b => b.type !== "title").length > 0 ? (
+                  textBlocks.filter(b => b.type !== "title").map((block, i) => (
+                    <TextInput
+                      key={`body-${i}`}
+                      style={styles.ncOcrText}
+                      value={block.text}
+                      onChangeText={(val) => updateBlockText(blocks.indexOf(block), val)}
+                      multiline
+                      placeholder="OCR text..."
+                      placeholderTextColor="#C4C4C4"
+                    />
+                  ))
+                ) : (
                   <TextInput
-                    key={`body-${i}`}
                     style={styles.ncOcrText}
-                    value={block.text}
-                    onChangeText={(val) => updateBlockText(blocks.indexOf(block), val)}
+                    value=""
+                    editable={false}
                     multiline
-                    placeholder="OCR text..."
+                    placeholder="No text extracted yet."
                     placeholderTextColor="#C4C4C4"
                   />
-                ))
-              ) : (
-                <TextInput
-                  style={styles.ncOcrText}
-                  value=""
-                  editable={false}
-                  multiline
-                  placeholder="No text extracted yet."
-                  placeholderTextColor="#C4C4C4"
-                />
-              )}
+                )}
+              </View>
               <TouchableOpacity style={styles.ncOcrRetry} onPress={() => {}}>
                 <IconPark name="refresh" size={12} color="#52525B" />
                 <Text style={styles.ncOcrRetryText}>重新识别</Text>
@@ -1049,11 +1051,18 @@ const styles = StyleSheet.create({
   ncOcrSection: {
     marginBottom: 16,
   },
+  ncOcrWrapper: {
+    height: 150,
+    borderWidth: 1,
+    borderColor: "#E4E4E7",
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: "#FAFAFA",
+  },
   ncOcrText: {
     fontSize: 14,
     lineHeight: 22,
     color: "#52525B",
-    height: 150,
     paddingVertical: 0,
   },
   ncOcrRetry: {
