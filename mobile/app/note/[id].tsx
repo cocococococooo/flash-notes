@@ -504,6 +504,10 @@ export default function NoteScreen() {
               <IconPark name="camera" size={40} color="#A1A1AA" />
               <Text style={styles.emptyImageText}>暂无截图</Text>
               <Text style={styles.emptyImageHint}>导入截图后会在这里展示</Text>
+              <TouchableOpacity style={styles.uploadBtn} onPress={handleImport}>
+                <IconPark name="image" size={16} color="#FFF" />
+                <Text style={styles.uploadBtnText}>上传截图</Text>
+              </TouchableOpacity>
             </View>
           )}
 
@@ -921,6 +925,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#A1A1AA",
     marginTop: 6,
+  },
+  uploadBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#18181B",
+    borderRadius: 100,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginTop: 16,
+  },
+  uploadBtnText: {
+    color: "#FFF",
+    fontSize: 14,
+    fontWeight: "600",
   },
   imageCard: {
     width: CARD_WIDTH,
