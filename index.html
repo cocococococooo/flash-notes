@@ -3002,8 +3002,7 @@ function runTesseractOcr(imageUrl, index) {
             var pct = Math.round(m.progress * 100);
             ocrEl.innerHTML = '<span class="ocr-loading">正在识别文字... ' + pct + '%</span>';
           }
-        },
-        tessedit_char_whitelist: '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ\u4e00-\u9fff\u3000-\u303f\uff00-\uffef，。！？、；：""''（）【】《》—…·',
+        }
       }).then(function(result) {
         if (timedOut) return;
         timedOut = true;
