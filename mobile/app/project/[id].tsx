@@ -144,7 +144,7 @@ export default function ProjectDetailScreen() {
             <Text style={styles.backText}>返回</Text>
           </View>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{projectTitle}</Text>
+        <Text style={styles.headerTitle} pointerEvents="none">{projectTitle}</Text>
         <TouchableOpacity
           style={[styles.importBtn, uploading && styles.disabled]}
           onPress={handleImport}
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FAFAFA",
     position: "relative",
   },
-  backBtn: { paddingVertical: 8, zIndex: 1 },
+  backBtn: { paddingVertical: 8, zIndex: 10 },
   backText: { fontSize: 15, color: "#18181B", fontWeight: "600" },
   headerTitle: {
     fontSize: 17,
