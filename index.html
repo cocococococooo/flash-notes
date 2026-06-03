@@ -1350,6 +1350,8 @@
     background: #FFFFFF;
     border-radius: 16px;
     padding: 16px;
+    height: 200px;
+    overflow: hidden;
     box-shadow: 0 0.602187px 0.602187px -0.916667px rgba(0,0,0,0.08),
                 0 2.28853px 2.28853px -1.83333px rgba(0,0,0,0.08),
                 0 10px 10px -2.75px rgba(0,0,0,0.07);
@@ -1381,7 +1383,18 @@
 
   /* OCR Section */
   .nc-ocr-section {
-    margin-bottom: 16px;
+    margin-bottom: 8px;
+    flex: 1;
+    overflow: hidden;
+  }
+  .nc-ocr-text {
+    font-size: 14px;
+    line-height: 1.5;
+    color: #52525B;
+    outline: none;
+    margin: 0;
+    height: 100%;
+    overflow-y: auto;
   }
   .nc-ocr-wrapper {
     height: 150px;
@@ -1654,9 +1667,7 @@
           </div>
           <h3 class="nc-heading-title" id="ncImageTitle" contenteditable="true">Image title</h3>
           <div class="nc-ocr-section">
-            <div class="nc-ocr-wrapper">
-              <p class="nc-ocr-text" id="ncOcrText" contenteditable="true">OCR text content...</p>
-            </div>
+            <p class="nc-ocr-text" id="ncOcrText" contenteditable="true">OCR text content...</p>
             <button class="nc-ocr-retry" id="ncOcrRetry" onclick="retryOcr(currentImageIndex)">
               <span data-icon="refresh"></span>重新识别
             </button>
