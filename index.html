@@ -2136,6 +2136,9 @@ function closeOverlay(id) {
     renderNotes();
     updateNoteCount();
     renderRecentNotes();
+    if (currentProjectId) {
+      openProjectNotes(currentProjectId);
+    }
   }
 }
 
