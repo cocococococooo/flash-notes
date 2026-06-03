@@ -1351,7 +1351,8 @@
     border-radius: 16px;
     padding: 16px;
     height: 460px;
-    overflow: hidden;
+    display: flex;
+    flex-direction: column;
     box-shadow: 0 0.602187px 0.602187px -0.916667px rgba(0,0,0,0.08),
                 0 2.28853px 2.28853px -1.83333px rgba(0,0,0,0.08),
                 0 10px 10px -2.75px rgba(0,0,0,0.07);
@@ -1672,6 +1673,7 @@
               <span data-icon="refresh"></span>重新识别
             </button>
           </div>
+          <div style="flex:1"></div>
           <div class="nc-tags-row">
             <div class="nc-badges" id="ncBadges"></div>
             <button class="nc-add-tag-btn" id="ncAddTagBtn" onclick="addTag()">+</button>

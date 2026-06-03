@@ -573,6 +573,9 @@ export default function NoteScreen() {
               </TouchableOpacity>
             </View>
 
+            {/* Spacer */}
+            <View style={{ flex: 1 }} />
+
             {/* Tags */}
             <View style={styles.ncTagsRow}>
               {note?.tags ? (
