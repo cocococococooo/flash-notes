@@ -16,8 +16,22 @@ def _get_ocr() -> PaddleOCR:
             lang="ch",
             show_log=False,
             use_gpu=False,
+            det_db_thresh=0.3,
+            det_db_box_thresh=0.5,
+            rec_batch_num=16,
         )
     return _ocr_instance
+
+
+def _clean_ocr_text(text: str) -> str:
+    import re
+    text = re.sub(r'\s+', ' ', text)
+    text = re.sub(r'[\u3000\xa0]+', ' ', text)
+    text = re.sub(r'(?<=[\u4e00-\u9fff])\s+(?=[\u4e00-\u9fff])', '', text)
+    text = re.sub(r'(?<=[a-zA-Z])\s+(?=[a-zA-Z])', '', text)
+    text = re.sub(r'([^\w\s])\1+', r'\1', text)
+    text = text.strip()
+    return text
 
 
 def ocr_recognize(file_path: str) -> str:
@@ -34,8 +48,10 @@ def ocr_recognize(file_path: str) -> str:
     for line in result[0]:
         text = line[1][0]
         confidence = line[1][1]
-        if confidence > 0.5:
-            lines.append(text)
+        if confidence > 0.7:
+            cleaned_text = _clean_ocr_text(text)
+            if cleaned_text:
+                lines.append(cleaned_text)
 
     return "\n".join(lines)
 
