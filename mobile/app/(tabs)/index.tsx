@@ -18,6 +18,7 @@ import { api } from "../../services/api";
 import { pickImages } from "../../services/imageUtils";
 import IconPark from "../../components/IconPark";
 import { API_BASE_URL, POLL_INTERVAL_MS } from "../../constants/config";
+import { getRecentNotes, addRecentNote } from "../../services/recentNotes";
 
 const { width: SCREEN_W } = Dimensions.get("window");
 const CARD_W = 240;
@@ -133,6 +134,7 @@ export default function HomeScreen() {
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [importedImages, setImportedImages] = useState<ImageData[]>([]);
   const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
+  const [recentNotes, setRecentNotes] = useState<{ id: number; title: string; timestamp: number }[]>([]);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadProjects = useCallback(async () => {
@@ -146,10 +148,16 @@ export default function HomeScreen() {
     }
   }, []);
 
+  const loadRecentNotes = useCallback(async () => {
+    const recent = await getRecentNotes();
+    setRecentNotes(recent);
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       loadProjects();
-    }, [loadProjects])
+      loadRecentNotes();
+    }, [loadProjects, loadRecentNotes])
   );
 
   useEffect(() => {
@@ -292,6 +300,35 @@ export default function HomeScreen() {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Recent Notes */}
+      {recentNotes.length > 0 && importedImages.length === 0 && (
+        <View style={styles.recentSection}>
+          <Text style={styles.sectionTitle}>最近访问</Text>
+          <FlatList
+            data={recentNotes}
+            keyExtractor={(item) => String(item.id)}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.recentList}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.recentCard}
+                onPress={() => {
+                  addRecentNote(item.id, item.title);
+                  router.push({ pathname: "/note/[id]", params: { id: item.id, fromRecent: "true" } });
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={styles.recentIcon}>
+                  <IconPark name="edit" size={18} color="#71717A" />
+                </View>
+                <Text style={styles.recentTitle} numberOfLines={1}>{item.title}</Text>
+              </TouchableOpacity>
+            )}
+          />
+        </View>
+      )}
 
       {/* Imported Images with OCR Results */}
       {importedImages.length > 0 && (
@@ -480,6 +517,29 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   importBtnSlimText: { color: "#FFF", fontWeight: "600", fontSize: 14, letterSpacing: 0.5 },
+
+  /* Recent notes */
+  recentSection: { paddingHorizontal: 16, marginBottom: 20 },
+  recentList: { gap: 12 },
+  recentCard: {
+    width: 120,
+    backgroundColor: "#FFF",
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#ECECEE",
+    alignItems: "center",
+  },
+  recentIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: "#F4F4F5",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+  recentTitle: { fontSize: 12, fontWeight: "500", color: "#18181B", textAlign: "center" },
 
   /* Results section */
   resultsSection: { flex: 1, paddingHorizontal: 16 },

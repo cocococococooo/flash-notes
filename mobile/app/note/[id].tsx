@@ -19,6 +19,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { api } from "../../services/api";
 import IconPark from "../../components/IconPark";
 import { API_BASE_URL } from "../../constants/config";
+import { addRecentNote } from "../../services/recentNotes";
 import * as Clipboard from "expo-clipboard";
 import { captureRef } from "react-native-view-shot";
 import * as MediaLibrary from "expo-media-library";
@@ -92,8 +93,9 @@ function blocksToMarkdown(blocks: Block[]): string {
 }
 
 export default function NoteScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, fromRecent } = useLocalSearchParams<{ id: string; fromRecent?: string }>();
   const projectId = parseInt(id, 10);
+  const isFromRecent = fromRecent === "true";
   const router = useRouter();
 
   const [note, setNote] = useState<Note | null>(null);
@@ -144,7 +146,11 @@ export default function NoteScreen() {
       setBlocks(parsedBlocks);
       
       const firstTitle = parsedBlocks.find(b => b.type === "title");
-      setNoteTitle(firstTitle?.text || "笔记");
+      const title = firstTitle?.text || "笔记";
+      setNoteTitle(title);
+      
+      // Track recent note
+      addRecentNote(projectId, title);
     } catch (e) {
       console.error(e);
     } finally {
@@ -499,7 +505,13 @@ export default function NoteScreen() {
       <View style={styles.topBar}>
         <TouchableOpacity 
           style={styles.backBtn} 
-          onPress={() => router.back()}
+          onPress={() => {
+            if (isFromRecent) {
+              router.replace("/(tabs)");
+            } else {
+              router.back();
+            }
+          }}
         >
           <IconPark name="arrowLeft" size={18} color="#18181B" />
           <Text style={styles.backBtnText}>返回</Text>
@@ -836,8 +848,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-  },
-    alignItems: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 0.602 },
     shadowOpacity: 0.08,

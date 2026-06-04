@@ -1873,6 +1873,7 @@ let projects = [];
 let projectImages = {};
 let allNotes = [];
 let currentProjectId = null;
+let noteOpenedFromRecent = false;
 let imageIdCounter = 1;
 let selectedNoteTag = null;
 
@@ -2028,7 +2029,7 @@ function renderRecentNotes() {
   list.innerHTML = recent.map(function(r, i) {
     var note = allNotes.find(function(n) { return n.projectId === r.id; });
     var imgCount = note ? (note.imageUrls || []).length : 0;
-    return '<div class="project-card fade-in" style="animation-delay:' + (i * 0.05) + 's" onclick="openNoteDetail(' + r.id + ')">' +
+    return '<div class="project-card fade-in" style="animation-delay:' + (i * 0.05) + 's" onclick="openNoteDetail(' + r.id + ', false, true)">' +
       '<div class="pci">' + icons.image + '</div>' +
       '<div class="pcb">' +
         '<div class="pct">' + (r.title || '笔记') + '</div>' +
@@ -2168,9 +2169,10 @@ function closeOverlay(id) {
     renderNotes();
     updateNoteCount();
     renderRecentNotes();
-    if (currentProjectId) {
+    if (currentProjectId && !noteOpenedFromRecent) {
       openProjectNotes(currentProjectId);
     }
+    noteOpenedFromRecent = false;
   }
 }
 
@@ -2419,8 +2421,9 @@ function renderNotes() {
 
 // ===================== NOTE DETAIL (CONT.) =====================
 
-function openNoteDetail(projectId, isNewImport) {
+function openNoteDetail(projectId, isNewImport, fromRecent) {
   currentProjectId = projectId;
+  noteOpenedFromRecent = !!fromRecent;
   currentImageIndex = 0;
   isProcessingNewImport = !!isNewImport;
   var note = allNotes.find(function(n) { return n.projectId === projectId; });

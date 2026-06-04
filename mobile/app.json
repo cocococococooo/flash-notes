@@ -22,9 +22,16 @@
     },
     "android": {
       "permissions": [
-        "READ_MEDIA_IMAGES",
-        "READ_EXTERNAL_STORAGE"
-      ]
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "com.coconiniy.flashnotes"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "15eb17d5-11aa-4d92-abde-4c9d41c4a3db"
+      }
     }
   }
 }
