@@ -30,6 +30,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const WRAPPER_PADDING = 12;
 const CARD_WIDTH = SCREEN_WIDTH - WRAPPER_PADDING * 2;
 const CARD_HEIGHT = CARD_WIDTH * 0.75;
+const CARD_IMAGE_HEIGHT = CARD_WIDTH * 1.5;
 const CARD_SPACING = 12;
 
 interface Note {
@@ -917,7 +918,7 @@ const styles = StyleSheet.create({
   },
   imageCard: {
     width: CARD_WIDTH,
-    height: CARD_WIDTH * 1.5,
+    height: CARD_IMAGE_HEIGHT,
     borderRadius: 17,
     overflow: "hidden",
     marginHorizontal: CARD_SPACING / 2,
