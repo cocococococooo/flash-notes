@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Alert,
   StyleSheet,
   ActivityIndicator,
+  ScrollView,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { api } from "../../services/api";
@@ -35,7 +36,36 @@ export default function ProjectDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const allTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    images.forEach((img) => {
+      try {
+        JSON.parse(img.tags || "[]").forEach((t: string) => tagSet.add(t));
+      } catch {}
+    });
+    return Array.from(tagSet).sort();
+  }, [images]);
+
+  const filteredImages = useMemo(() => {
+    if (selectedTags.length === 0) return images;
+    return images.filter((img) => {
+      try {
+        const imgTags: string[] = JSON.parse(img.tags || "[]");
+        return selectedTags.some((t) => imgTags.includes(t));
+      } catch {
+        return false;
+      }
+    });
+  }, [images, selectedTags]);
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
 
   const loadImages = useCallback(async () => {
     try {
@@ -157,9 +187,56 @@ export default function ProjectDetailScreen() {
       </View>
 
       <FlatList
-        data={images}
+        data={filteredImages}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={styles.list}
+        ListHeaderComponent={
+          allTags.length > 0 ? (
+            <View style={styles.tagFilterWrap}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.tagFilterContent}
+              >
+                <TouchableOpacity
+                  style={[
+                    styles.tagChip,
+                    selectedTags.length === 0 && styles.tagChipActive,
+                  ]}
+                  onPress={() => setSelectedTags([])}
+                >
+                  <Text
+                    style={[
+                      styles.tagChipText,
+                      selectedTags.length === 0 && styles.tagChipTextActive,
+                    ]}
+                  >
+                    全部
+                  </Text>
+                </TouchableOpacity>
+                {allTags.map((tag) => (
+                  <TouchableOpacity
+                    key={tag}
+                    style={[
+                      styles.tagChip,
+                      selectedTags.includes(tag) && styles.tagChipActive,
+                    ]}
+                    onPress={() => toggleTag(tag)}
+                  >
+                    <Text
+                      style={[
+                        styles.tagChipText,
+                        selectedTags.includes(tag) && styles.tagChipTextActive,
+                      ]}
+                    >
+                      {tag}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          ) : null
+        }
         renderItem={({ item }) => (
           <ImageCard
             image={item}
@@ -168,10 +245,17 @@ export default function ProjectDetailScreen() {
           />
         )}
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.empty}>暂无图片</Text>
-            <Text style={styles.emptyHint}>点击上方按钮从相册导入截图</Text>
-          </View>
+          images.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.empty}>暂无图片</Text>
+              <Text style={styles.emptyHint}>点击上方按钮从相册导入截图</Text>
+            </View>
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.empty}>无匹配结果</Text>
+              <Text style={styles.emptyHint}>试试其他标签筛选</Text>
+            </View>
+          )
         }
       />
 
@@ -233,6 +317,28 @@ const styles = StyleSheet.create({
   },
   importBtnText: { color: "#FFF", fontWeight: "600", fontSize: 13 },
   disabled: { opacity: 0.5 },
+  tagFilterWrap: { paddingTop: 12, paddingBottom: 8 },
+  tagFilterContent: { gap: 8 },
+  tagChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: "#D4D4D8",
+    backgroundColor: "#FFF",
+  },
+  tagChipActive: {
+    backgroundColor: "#18181B",
+    borderColor: "#18181B",
+  },
+  tagChipText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#71717A",
+  },
+  tagChipTextActive: {
+    color: "#FFF",
+  },
   list: { paddingHorizontal: 16, paddingBottom: 100 },
   emptyContainer: { alignItems: "center", marginTop: 80 },
   empty: { fontSize: 16, fontWeight: "500", color: "#71717A" },

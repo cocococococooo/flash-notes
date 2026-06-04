@@ -853,6 +853,20 @@
     font-size: 12px; color: var(--accent); font-weight: 500;
   }
 
+  .tag-filter-bar { display: flex; align-items: center; border-bottom: 1px solid #ECECEE; }
+  .tag-chip {
+    display: inline-flex; align-items: center; padding: 6px 14px; border-radius: 100px;
+    border: 1.5px solid #D4D4D8; background: #FFF;
+    font-size: 13px; font-weight: 500; color: #71717A;
+    cursor: pointer; font-family: inherit;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .tag-chip:hover { border-color: #18181B; color: #18181B; }
+  .tag-chip.active {
+    background: #18181B; border-color: #18181B; color: #FFF;
+  }
+  .tag-chip.active:hover { background: #333; }
+
   /* Note editor overlay */
   .note-content { padding: 12px 0 48px; }
   .note-content [contenteditable] { outline: none; cursor: text; border-radius: 6px; padding: 4px 8px; margin: 0 -8px; transition: background 0.15s; }
@@ -1654,6 +1668,7 @@
       <span class="o-title" id="projectOverlayTitle">项目</span>
       <button class="o-action" onclick="triggerFilePicker()">从相册导入</button>
     </div>
+    <div id="projectTagFilter" class="tag-filter-bar" style="display:none;padding:12px 16px;overflow-x:auto;white-space:nowrap;gap:8px"></div>
     <div class="overlay-scroll" id="projectImagesList"></div>
   </div>
 
@@ -1666,6 +1681,7 @@
       <span class="o-title" id="projectNotesTitle" style="color:#18181B;font-weight:600"></span>
       <span></span>
     </div>
+    <div id="projectNotesTagFilter" class="tag-filter-bar" style="display:none;padding:12px 16px;overflow-x:auto;white-space:nowrap;gap:8px"></div>
     <div class="overlay-scroll">
       <div class="project-notes-list" id="projectNotesList"></div>
     </div>
@@ -1874,6 +1890,8 @@ let projectImages = {};
 let allNotes = [];
 let currentProjectId = null;
 let noteOpenedFromRecent = false;
+let projectSelectedTags = [];
+let projectNotesSelectedTags = [];
 let imageIdCounter = 1;
 let selectedNoteTag = null;
 
@@ -2178,6 +2196,7 @@ function closeOverlay(id) {
 
 function openProject(id) {
   currentProjectId = id;
+  projectSelectedTags = [];
   const project = projects.find(p => p.id === id);
   document.getElementById('projectOverlayTitle').textContent =
     `${project ? project.title : '项目'} · ${(projectImages[id] || []).length} 张图片`;
@@ -2188,11 +2207,58 @@ function openProject(id) {
 function renderProjectImages() {
   const list = document.getElementById('projectImagesList');
   const images = projectImages[currentProjectId] || [];
-  if (images.length === 0) {
-    list.innerHTML = `<div class="empty-projects" style="margin-top:60px"><div class="ep-icon">${icons.camera}</div><div class="ep-t">暂无图片</div><div class="ep-h">点击顶部按钮从相册导入截图</div></div>`;
+
+  // Build tag filter
+  var tagSet = {};
+  images.forEach(function(img) {
+    try {
+      JSON.parse(img.tags).forEach(function(t) { tagSet[t] = true; });
+    } catch(e) {}
+  });
+  var allTags = Object.keys(tagSet).sort();
+  var filterEl = document.getElementById('projectTagFilter');
+  if (allTags.length > 0) {
+    filterEl.style.display = 'flex';
+    var chipsHtml = '<button class="tag-chip' + (projectSelectedTags.length === 0 ? ' active' : '') + '" onclick="toggleProjectTag(\'\')">全部</button>';
+    allTags.forEach(function(tag) {
+      chipsHtml += '<button class="tag-chip' + (projectSelectedTags.indexOf(tag) !== -1 ? ' active' : '') + '" onclick="toggleProjectTag(\'' + tag.replace(/'/g, "\\'") + '\')">' + tag + '</button>';
+    });
+    filterEl.innerHTML = chipsHtml;
   } else {
-    list.innerHTML = images.map((img, i) => getImageCardHTML(img, i)).join('');
+    filterEl.style.display = 'none';
   }
+
+  var filtered = images;
+  if (projectSelectedTags.length > 0) {
+    filtered = images.filter(function(img) {
+      try {
+        var imgTags = JSON.parse(img.tags);
+        return projectSelectedTags.some(function(t) { return imgTags.indexOf(t) !== -1; });
+      } catch(e) { return false; }
+    });
+  }
+
+  if (filtered.length === 0) {
+    list.innerHTML = images.length === 0
+      ? '<div class="empty-projects" style="margin-top:60px"><div class="ep-icon">' + icons.camera + '</div><div class="ep-t">暂无图片</div><div class="ep-h">点击顶部按钮从相册导入截图</div></div>'
+      : '<div class="empty-projects" style="margin-top:60px"><div class="ep-icon">' + icons.search + '</div><div class="ep-t">无匹配结果</div><div class="ep-h">试试其他标签筛选</div></div>';
+  } else {
+    list.innerHTML = filtered.map(function(img, i) { return getImageCardHTML(img, i); }).join('');
+  }
+}
+
+function toggleProjectTag(tag) {
+  if (tag === '') {
+    projectSelectedTags = [];
+  } else {
+    var idx = projectSelectedTags.indexOf(tag);
+    if (idx !== -1) {
+      projectSelectedTags.splice(idx, 1);
+    } else {
+      projectSelectedTags.push(tag);
+    }
+  }
+  renderProjectImages();
 }
 
 function toggleOcr(el) {
@@ -2325,14 +2391,47 @@ function openProjectNotes(projectId) {
   var project = projects.find(p => p.id === projectId);
   var title = project ? project.title : '项目';
   document.getElementById('projectNotesTitle').textContent = title;
-  
+  projectNotesSelectedTags = [];
+
   var list = document.getElementById('projectNotesList');
   var notes = allNotes.filter(n => n.projectId === projectId);
-  
-  if (notes.length === 0) {
-    list.innerHTML = '<div class="empty-notes"><div class="en-icon">' + icons.write + '</div><div class="en-t">还没有笔记</div><div class="en-h">导入截图后，笔记会出现在这里</div></div>';
+
+  // Build tag filter
+  var tagSet = {};
+  notes.forEach(function(n) {
+    try {
+      JSON.parse(n.tags || '[]').forEach(function(t) { tagSet[t] = true; });
+    } catch(e) {}
+  });
+  var allTags = Object.keys(tagSet).sort();
+  var filterEl = document.getElementById('projectNotesTagFilter');
+  if (allTags.length > 0) {
+    filterEl.style.display = 'flex';
+    var chipsHtml = '<button class="tag-chip' + (projectNotesSelectedTags.length === 0 ? ' active' : '') + '" onclick="toggleProjectNotesTag(\'\')">全部</button>';
+    allTags.forEach(function(tag) {
+      chipsHtml += '<button class="tag-chip' + (projectNotesSelectedTags.indexOf(tag) !== -1 ? ' active' : '') + '" onclick="toggleProjectNotesTag(\'' + tag.replace(/'/g, "\\'") + '\')">' + tag + '</button>';
+    });
+    filterEl.innerHTML = chipsHtml;
   } else {
-    list.innerHTML = notes.map((n, i) => {
+    filterEl.style.display = 'none';
+  }
+
+  var filtered = notes;
+  if (projectNotesSelectedTags.length > 0) {
+    filtered = notes.filter(function(n) {
+      try {
+        var noteTags = JSON.parse(n.tags || '[]');
+        return projectNotesSelectedTags.some(function(t) { return noteTags.indexOf(t) !== -1; });
+      } catch(e) { return false; }
+    });
+  }
+
+  if (filtered.length === 0) {
+    list.innerHTML = notes.length === 0
+      ? '<div class="empty-notes"><div class="en-icon">' + icons.write + '</div><div class="en-t">还没有笔记</div><div class="en-h">导入截图后，笔记会出现在这里</div></div>'
+      : '<div class="empty-projects" style="margin-top:40px"><div class="ep-icon">' + icons.search + '</div><div class="ep-t">无匹配结果</div><div class="ep-h">试试其他标签筛选</div></div>';
+  } else {
+    list.innerHTML = filtered.map((n, i) => {
       var tagList = [];
       try { tagList = JSON.parse(n.tags || '[]'); } catch {}
       var imgs = (n.imageUrls || []).slice(0, 3);
@@ -2368,6 +2467,20 @@ function openProjectNotes(projectId) {
   }
   
   document.getElementById('overlay-project-notes').classList.add('open');
+}
+
+function toggleProjectNotesTag(tag) {
+  if (tag === '') {
+    projectNotesSelectedTags = [];
+  } else {
+    var idx = projectNotesSelectedTags.indexOf(tag);
+    if (idx !== -1) {
+      projectNotesSelectedTags.splice(idx, 1);
+    } else {
+      projectNotesSelectedTags.push(tag);
+    }
+  }
+  openProjectNotes(currentProjectId);
 }
 
 function renderNotes() {

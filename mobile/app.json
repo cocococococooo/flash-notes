@@ -13,7 +13,10 @@
           "cameraPermission": "闪记需要访问相机来拍摄学习资料"
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      "expo-router",
+      "expo-sharing",
+      "expo-status-bar"
     ],
     "ios": {
       "infoPlist": {
