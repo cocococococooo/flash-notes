@@ -372,7 +372,7 @@ export default function NoteScreen() {
   const imageBlocks = blocks.filter(b => b.type === "image" && b.src);
   const textBlocks = blocks.filter(b => b.type !== "image");
 
-  const renderImageCard = ({ item, index }: { item: Block; index: number }) => {
+  const renderSlideCard = ({ item, index }: { item: Block; index: number }) => {
     const inputRange = [
       (index - 1) * (CARD_WIDTH + CARD_SPACING),
       index * (CARD_WIDTH + CARD_SPACING),
@@ -381,20 +381,23 @@ export default function NoteScreen() {
 
     const scale = scrollX.interpolate({
       inputRange,
-      outputRange: [0.85, 1, 0.85],
+      outputRange: [0.92, 1, 0.92],
       extrapolate: "clamp",
     });
 
     const opacity = scrollX.interpolate({
       inputRange,
-      outputRange: [0.4, 1, 0.4],
+      outputRange: [0.5, 1, 0.5],
       extrapolate: "clamp",
     });
+
+    const ocrText = note?.content || "";
+    const folderName = noteTitle || "Folder";
 
     return (
       <Animated.View
         style={[
-          styles.cardWrapper,
+          styles.slideWrapper,
           {
             width: CARD_WIDTH,
             transform: [{ scale }],
@@ -402,17 +405,78 @@ export default function NoteScreen() {
           },
         ]}
       >
+        {/* Image */}
         <TouchableOpacity
           activeOpacity={0.95}
           onPress={() => setPreviewImage(item.src!)}
-          style={styles.card}
+          style={styles.slideImageContainer}
         >
-          <Image source={{ uri: item.src }} style={styles.cardImage} resizeMode="contain" />
-          <View style={styles.cardOverlay} />
-          <View style={styles.cardBadge}>
-            <Text style={styles.cardBadgeText}>{index + 1}</Text>
-          </View>
+          <Image source={{ uri: item.src }} style={styles.slideImage} resizeMode="contain" />
         </TouchableOpacity>
+
+        {/* Content Card */}
+        <View style={styles.contentCard}>
+          <View style={styles.ncTextPill}>
+            <IconPark name="folder" size={14} color="#4F4F4F" />
+            <Text style={styles.ncPillText}>{folderName}</Text>
+          </View>
+
+          <TextInput
+            style={styles.ncImageTitle}
+            value={noteTitle}
+            onChangeText={() => {}}
+            multiline
+            placeholder="Enter title..."
+            placeholderTextColor="#C4C4C4"
+          />
+
+          <View style={styles.ncOcrSection}>
+            <TextInput
+              style={styles.ncOcrText}
+              value={ocrText}
+              onChangeText={() => {}}
+              multiline
+              placeholder="OCR text..."
+              placeholderTextColor="#C4C4C4"
+            />
+            <TouchableOpacity style={styles.ncOcrRetry} onPress={() => {}}>
+              <IconPark name="refresh" size={12} color="#52525B" />
+              <Text style={styles.ncOcrRetryText}>重新识别</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={{ flex: 1 }} />
+
+          <View style={styles.ncTagsRow}>
+            {note?.tags ? (
+              (() => {
+                const raw = note.tags || '';
+                let list: string[] = [];
+                try { list = JSON.parse(raw); } catch { list = raw.split(',').map(t => t.trim()).filter(Boolean); }
+                return list.map((tag, i) => {
+                  const colors = getTagColors(tag);
+                  return (
+                    <View key={i} style={[styles.ncBadgeElement, { backgroundColor: colors.bg }]}>
+                      <Text style={[styles.ncBadgeText, { color: colors.text }]}>{tag}</Text>
+                      <TouchableOpacity
+                        style={styles.ncBadgeRemove}
+                        onPress={() => removeTag(tag)}
+                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                      >
+                        <Text style={[styles.ncBadgeRemoveText, { color: colors.text }]}>×</Text>
+                      </TouchableOpacity>
+                    </View>
+                  );
+                });
+              })()
+            ) : (
+              <Text style={styles.ncBadgePlaceholder}>No tags</Text>
+            )}
+            <TouchableOpacity style={styles.ncAddTagBtn} onPress={handleAddTag}>
+              <Text style={styles.ncAddTagBtnText}>+</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Animated.View>
     );
   };
@@ -469,36 +533,37 @@ export default function NoteScreen() {
         <View ref={captureRef} style={styles.captureArea}>
           {/* Main Card Container */}
           <View style={styles.mainCard}>
-          {/* Image Carousel Section */}
+          {/* Slides Track */}
           {imageBlocks.length > 0 ? (
-            <View style={styles.carouselSection}>
-              <View style={styles.carouselContainer}>
-                <Animated.FlatList
-                  ref={carouselRef}
-                  data={imageBlocks}
-                  horizontal
-                  pagingEnabled={false}
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.carouselContent}
-                  snapToInterval={CARD_WIDTH + CARD_SPACING}
-                  decelerationRate="fast"
-                  onScroll={Animated.event(
-                    [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-                    { useNativeDriver: true }
-                  )}
-                  onMomentumScrollEnd={(e) => {
-                    const index = Math.round(
-                      e.nativeEvent.contentOffset.x / (CARD_WIDTH + CARD_SPACING)
-                    );
-                    if (index !== currentImageIndex && index >= 0 && index < imageBlocks.length) {
-                      setCurrentImageIndex(index);
-                    }
-                  }}
-                  renderItem={renderImageCard}
-                  keyExtractor={(item, index) => `image-${index}`}
-                />
+            <>
+              <Animated.FlatList
+                ref={carouselRef}
+                data={imageBlocks}
+                horizontal
+                pagingEnabled={false}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.carouselContent}
+                snapToInterval={CARD_WIDTH + CARD_SPACING}
+                decelerationRate="fast"
+                onScroll={Animated.event(
+                  [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+                  { useNativeDriver: true }
+                )}
+                onMomentumScrollEnd={(e) => {
+                  const index = Math.round(
+                    e.nativeEvent.contentOffset.x / (CARD_WIDTH + CARD_SPACING)
+                  );
+                  if (index !== currentImageIndex && index >= 0 && index < imageBlocks.length) {
+                    setCurrentImageIndex(index);
+                  }
+                }}
+                renderItem={renderSlideCard}
+                keyExtractor={(item, index) => `slide-${index}`}
+              />
+              <View style={styles.fixedBadge}>
+                <Text style={styles.fixedBadgeText}>{currentImageIndex + 1}</Text>
               </View>
-            </View>
+            </>
           ) : (
             <View style={styles.emptyImageContainer}>
               <IconPark name="camera" size={40} color="#A1A1AA" />
@@ -510,103 +575,6 @@ export default function NoteScreen() {
               </TouchableOpacity>
             </View>
           )}
-
-          {/* Content Card */}
-          <View style={styles.contentCard}>
-            {/* Text Pill - folder name */}
-            <View style={styles.ncTextPill}>
-              <IconPark name="folder" size={14} color="#4F4F4F" />
-              <Text style={styles.ncPillText}>{noteTitle}</Text>
-            </View>
-
-            {/* Image Title */}
-            {textBlocks.filter(b => b.type === "title").length > 0 ? (
-              textBlocks.filter(b => b.type === "title").map((block, i) => (
-                <TextInput
-                  key={`title-${i}`}
-                  style={styles.ncImageTitle}
-                  value={block.text}
-                  onChangeText={(val) => updateBlockText(blocks.indexOf(block), val)}
-                  multiline
-                  placeholder="Enter title..."
-                  placeholderTextColor="#C4C4C4"
-                />
-              ))
-            ) : (
-              <TextInput
-                style={styles.ncImageTitle}
-                value={noteTitle}
-                onChangeText={() => {}}
-                multiline
-                placeholder="Enter title..."
-                placeholderTextColor="#C4C4C4"
-              />
-            )}
-
-            {/* OCR Section */}
-            <View style={styles.ncOcrSection}>
-              {textBlocks.filter(b => b.type !== "title").length > 0 ? (
-                textBlocks.filter(b => b.type !== "title").map((block, i) => (
-                  <TextInput
-                    key={`body-${i}`}
-                    style={styles.ncOcrText}
-                    value={block.text}
-                    onChangeText={(val) => updateBlockText(blocks.indexOf(block), val)}
-                    multiline
-                    placeholder="OCR text..."
-                    placeholderTextColor="#C4C4C4"
-                  />
-                ))
-              ) : (
-                <TextInput
-                  style={styles.ncOcrText}
-                  value=""
-                  editable={false}
-                  multiline
-                  placeholder="No text extracted yet."
-                  placeholderTextColor="#C4C4C4"
-                />
-              )}
-              <TouchableOpacity style={styles.ncOcrRetry} onPress={() => {}}>
-                <IconPark name="refresh" size={12} color="#52525B" />
-                <Text style={styles.ncOcrRetryText}>重新识别</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Spacer */}
-            <View style={{ flex: 1 }} />
-
-            {/* Tags */}
-            <View style={styles.ncTagsRow}>
-              {note?.tags ? (
-                (() => {
-                  const raw = note.tags || '';
-                  let list: string[] = [];
-                  try { list = JSON.parse(raw); } catch { list = raw.split(',').map(t => t.trim()).filter(Boolean); }
-                  return list.map((tag, i) => {
-                    const colors = getTagColors(tag);
-                    return (
-                      <View key={i} style={[styles.ncBadgeElement, { backgroundColor: colors.bg }]}>
-                        <Text style={[styles.ncBadgeText, { color: colors.text }]}>{tag}</Text>
-                        <TouchableOpacity
-                          style={styles.ncBadgeRemove}
-                          onPress={() => removeTag(tag)}
-                          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                        >
-                          <Text style={[styles.ncBadgeRemoveText, { color: colors.text }]}>×</Text>
-                        </TouchableOpacity>
-                      </View>
-                    );
-                  });
-                })()
-              ) : (
-                <Text style={styles.ncBadgePlaceholder}>No tags</Text>
-              )}
-              <TouchableOpacity style={styles.ncAddTagBtn} onPress={handleAddTag}>
-                <Text style={styles.ncAddTagBtnText}>+</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
         </View>
         </View>
 
@@ -895,7 +863,8 @@ const styles = StyleSheet.create({
     width: SCREEN_WIDTH,
     borderRadius: 20,
     padding: WRAPPER_PADDING,
-    gap: 12,
+    position: "relative",
+    overflow: "hidden",
   },
 
   /* Carousel Section */
@@ -909,6 +878,8 @@ const styles = StyleSheet.create({
   },
   carouselContent: {
     alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
   },
   emptyImageContainer: {
     width: CARD_WIDTH,
@@ -968,6 +939,21 @@ const styles = StyleSheet.create({
   cardWrapper: {
     marginRight: CARD_SPACING,
   },
+  slideWrapper: {
+    marginRight: CARD_SPACING,
+    overflow: "hidden",
+  },
+  slideImageContainer: {
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT,
+    overflow: "hidden",
+    backgroundColor: "#E5E5E5",
+    flexShrink: 0,
+  },
+  slideImage: {
+    width: "100%",
+    height: "100%",
+  },
   card: {
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
@@ -998,6 +984,29 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.9)",
     alignItems: "center",
     justifyContent: "center",
+    display: "none",
+  },
+  fixedBadge: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.9)",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  fixedBadgeText: {
+    fontSize: 12,
+    fontWeight: "700" as const,
+    color: "#18181B",
   },
   cardBadgeText: {
     fontSize: 12,
@@ -1007,15 +1016,12 @@ const styles = StyleSheet.create({
 
   /* Content Card */
   contentCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "transparent",
     borderRadius: 16,
     padding: 16,
-    height: 460,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 0.602187 },
-    shadowOpacity: 0.08,
-    shadowRadius: 0.602187,
-    elevation: 3,
+    flex: 1,
+    minHeight: 360,
+    overflow: "hidden",
   },
 
   /* Text Pill - folder name */
@@ -1031,6 +1037,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     marginBottom: 12,
     gap: 4,
+    overflow: "hidden",
   },
   ncPillText: {
     fontSize: 13,

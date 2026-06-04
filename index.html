@@ -1147,6 +1147,8 @@
     z-index: 300;
     justify-content: center;
     align-items: center;
+    flex-direction: column;
+    cursor: pointer;
   }
   .viewer-overlay.open { display: flex; animation: overlayIn 0.25s ease; }
   .viewer-overlay .close-v {
@@ -1280,10 +1282,34 @@
     width: 100%;
     border-radius: 20px;
     margin: 0 0 16px;
+    padding: 12px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Slides Track */
+  .note-slides-track {
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    scroll-behavior: smooth;
+    border-radius: 16px;
+    background: #FFFFFF;
+  }
+  .note-slides-track::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Each Slide = Image + Text Content */
+  .note-slide {
+    flex: 0 0 100%;
+    scroll-snap-align: center;
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    padding: 12px;
+    overflow: hidden;
   }
 
   /* Image Section - framer-keeoik */
@@ -1293,6 +1319,8 @@
     position: relative;
     width: 100%;
     aspect-ratio: 4/3;
+    flex-shrink: 0;
+    background: #E5E5E5;
   }
   .note-card-track {
     display: flex;
@@ -1329,6 +1357,9 @@
     border-radius: inherit;
   }
   .note-card-item .card-badge {
+    display: none;
+  }
+  .note-detail-wrapper > .card-badge {
     position: absolute;
     top: 12px;
     right: 12px;
@@ -1343,19 +1374,20 @@
     font-weight: 700;
     color: #18181B;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    z-index: 10;
+    pointer-events: none;
   }
 
   /* Content Card - framer-73aak2 */
   .note-content-card {
-    background: #FFFFFF;
-    border-radius: 16px;
+    background: transparent;
+    border-radius: 0 0 16px 16px;
     padding: 16px;
-    height: 460px;
+    flex: 1;
+    min-height: 360px;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 0.602187px 0.602187px -0.916667px rgba(0,0,0,0.08),
-                0 2.28853px 2.28853px -1.83333px rgba(0,0,0,0.08),
-                0 10px 10px -2.75px rgba(0,0,0,0.07);
+    overflow: hidden;
   }
 
   /* Text Pill - folder name */
@@ -1370,6 +1402,7 @@
     font-size: 13px;
     font-weight: 500;
     color: #4F4F4F;
+    max-width: fit-content;
   }
 
   /* Image Title */
@@ -1654,29 +1687,10 @@
     </div>
     <div class="overlay-scroll">
       <div class="note-detail-wrapper">
-        <!-- Image Carousel -->
-        <div class="note-card-carousel" id="noteCarousel">
-          <div class="note-card-track" id="noteCardTrack"></div>
-        </div>
-        <!-- Content Card - Framer style -->
-        <div class="note-content-card" id="noteContentCard">
-          <div class="nc-text-pill">
-            <span data-icon="folderSm" style="width:14px;height:14px;display:inline-flex;align-items:center;margin-right:4px"></span>
-            <span id="ncFolderName">Folder</span>
-          </div>
-          <h3 class="nc-heading-title" id="ncImageTitle" contenteditable="true">Image title</h3>
-          <div class="nc-ocr-section">
-            <p class="nc-ocr-text" id="ncOcrText" contenteditable="true">OCR text content...</p>
-            <button class="nc-ocr-retry" id="ncOcrRetry" onclick="retryOcr(currentImageIndex)">
-              <span data-icon="refresh"></span>重新识别
-            </button>
-          </div>
-          <div style="flex:1"></div>
-          <div class="nc-tags-row">
-            <div class="nc-badges" id="ncBadges"></div>
-            <button class="nc-add-tag-btn" id="ncAddTagBtn" onclick="addTag()">+</button>
-          </div>
-        </div>
+        <!-- Slides Track -->
+        <div class="note-slides-track" id="noteSlidesTrack"></div>
+        <!-- Fixed Badge -->
+        <div class="card-badge" id="cardBadge">1</div>
       </div>
       <!-- Dots Indicator -->
       <div class="note-card-dots" id="noteCardDots"></div>
@@ -1684,9 +1698,9 @@
   </div>
 
   <!-- ===== IMAGE VIEWER ===== -->
-  <div class="viewer-overlay" id="viewer">
-    <button class="close-v" onclick="closeViewer()">关闭</button>
-    <div class="v-content"><span data-icon="notes" style="margin-right:8px;opacity:0.6"></span> 图片预览 (模拟)</div>
+  <div class="viewer-overlay" id="viewer" onclick="closeViewer()">
+    <button class="close-v" onclick="event.stopPropagation();closeViewer()">关闭</button>
+    <img id="viewerImg" src="" onclick="event.stopPropagation()" style="max-width:90%;max-height:80%;object-fit:contain;border-radius:8px;" />
   </div>
 
   <!-- Share Bottom Sheet -->
@@ -2458,14 +2472,8 @@ function renderCurrentImage(note) {
   } else if (i >= total) {
     if (nextBtn) nextBtn.style.display = 'none';
     if (saveBtn) saveBtn.style.display = 'inline-block';
-    document.getElementById('noteCardTrack').innerHTML = '';
+    document.getElementById('noteSlidesTrack').innerHTML = '';
     document.getElementById('noteCardDots').innerHTML = '';
-    document.getElementById('ncFolderName').textContent = '---';
-    document.getElementById('ncImageTitle').textContent = 'All Done!';
-    document.getElementById('ncOcrText').innerHTML = '<div style="display:flex;align-items:center;gap:8px"><span style="font-size:20px">&#10003;</span> Processed ' + total + ' screenshots</div>';
-    var retryBtn = document.getElementById('ncOcrRetry');
-    if (retryBtn) retryBtn.style.display = 'none';
-    document.getElementById('ncBadges').innerHTML = '';
     return;
   } else {
     if (i >= total - 1) {
@@ -2480,10 +2488,10 @@ function renderCurrentImage(note) {
     }
   }
 
-  // Render card carousel
+  // Render slides (image + text content per slide)
   var trackHtml = '';
   if (imgUrls.length === 0) {
-    trackHtml = '<div class="note-card-item empty-state" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px">' +
+    trackHtml = '<div class="note-slide" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;gap:8px">' +
       '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#A1A1AA" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>' +
       '<div style="font-size:16px;font-weight:500;color:#71717A">暂无截图</div>' +
       '<div style="font-size:13px;color:#A1A1AA">导入截图后会在这里展示</div>' +
@@ -2494,14 +2502,60 @@ function renderCurrentImage(note) {
     '</div>';
   } else {
     imgUrls.forEach(function(url, idx) {
-      var isActive = idx === i;
-      trackHtml += '<div class="note-card-item' + (isActive ? ' active' : '') + '" data-index="' + idx + '">';
-      trackHtml += '<img src="' + url + '" />';
-      trackHtml += '<div class="card-badge">' + (idx + 1) + '</div>';
+      var ocrText = ocrTexts[idx] || '';
+      var title = note.title || note.projectTitle || '';
+      var tagList = [];
+      if (typeof note.tags === 'string') {
+        try { tagList = JSON.parse(note.tags); } catch(e) { tagList = note.tags.split(',').map(function(t){return t.trim()}).filter(Boolean); }
+      } else if (Array.isArray(note.tags)) {
+        tagList = note.tags;
+      }
+      var folderName = note.projectTitle || note.title || 'Folder';
+
+      // Build tags HTML
+      var tagsHtml = '';
+      if (tagList.length > 0) {
+        tagList.forEach(function(tag, tIdx) {
+          var colors = getTagColors(tag);
+          tagsHtml += '<div class="nc-badge" style="background:' + colors.bg + ';color:' + colors.text + '"><span>' + tag + '</span><span class="nc-badge-remove" data-note-idx="' + idx + '" data-tag-idx="' + tIdx + '" style="color:' + colors.text + '">×</span></div>';
+        });
+      } else {
+        tagsHtml = '<div class="nc-badge-placeholder">No tags</div>';
+      }
+
+      trackHtml += '<div class="note-slide" data-index="' + idx + '">';
+      // Image
+      trackHtml += '<div class="note-card-carousel">';
+      trackHtml += '<img src="' + url + '" onclick="event.stopPropagation();openViewer(\'' + url.replace(/'/g, "\\'") + '\')" style="width:100%;height:100%;object-fit:contain;cursor:pointer" />';
+      trackHtml += '</div>';
+      // Text Content Card
+      trackHtml += '<div class="note-content-card">';
+      trackHtml += '<div class="nc-text-pill"><span data-icon="folderSm" style="width:14px;height:14px;display:inline-flex;align-items:center;margin-right:4px"></span><span>' + folderName + '</span></div>';
+      trackHtml += '<h3 class="nc-heading-title" contenteditable="true">' + title + '</h3>';
+      trackHtml += '<div class="nc-ocr-section">';
+      trackHtml += '<p class="nc-ocr-text" contenteditable="true" data-placeholder="No text extracted...">' + ocrText + '</p>';
+      trackHtml += '<button class="nc-ocr-retry" onclick="retryOcr(' + idx + ')"><span data-icon="refresh"></span>重新识别</button>';
+      trackHtml += '</div>';
+      trackHtml += '<div style="flex:1"></div>';
+      trackHtml += '<div class="nc-tags-row">';
+      trackHtml += '<div class="nc-badges">' + tagsHtml + '</div>';
+      trackHtml += '<button class="nc-add-tag-btn" onclick="addTag()">+</button>';
+      trackHtml += '</div>';
+      trackHtml += '</div>';
       trackHtml += '</div>';
     });
   }
-  document.getElementById('noteCardTrack').innerHTML = trackHtml;
+  document.getElementById('noteSlidesTrack').innerHTML = trackHtml;
+  initIcons();
+
+  // Update fixed badge
+  var badge = document.getElementById('cardBadge');
+  if (imgUrls.length > 0) {
+    badge.textContent = (i + 1);
+    badge.style.display = 'flex';
+  } else {
+    badge.style.display = 'none';
+  }
 
   // Render dots
   var dotsHtml = '';
@@ -2510,14 +2564,10 @@ function renderCurrentImage(note) {
   });
   document.getElementById('noteCardDots').innerHTML = dotsHtml;
 
-
-  // Scroll to current card
+  // Scroll to current slide
   setTimeout(function() {
     scrollToCard(i, false);
   }, 50);
-
-  // Render text content for current image
-  renderTextContent(note, i);
 
   if (isProcessingNewImport) {
     showOcrNotice(function() { runTesseractOcr(imgUrls[i], i); });
@@ -2590,21 +2640,23 @@ function getTagColors(tag) {
   return tagColorPalette[Math.abs(hash) % tagColorPalette.length];
 }
 
-// Delegate click on ncBadges for remove buttons
-document.getElementById('ncBadges').addEventListener('click', function(e) {
+// Delegate click on ncBadges for remove buttons (using event delegation on the slides track)
+document.getElementById('noteSlidesTrack').addEventListener('click', function(e) {
   var target = e.target;
   if (!target.classList.contains('nc-badge-remove')) return;
-  var idx = parseInt(target.getAttribute('data-index'), 10);
-  if (isNaN(idx)) return;
+  var noteIdx = parseInt(target.getAttribute('data-note-idx'), 10);
+  var tagIdx = parseInt(target.getAttribute('data-tag-idx'), 10);
+  if (isNaN(noteIdx) || isNaN(tagIdx)) return;
   var note = allNotes.find(function(n) { return n.projectId === currentProjectId; });
   if (!note) return;
   var raw = note.tags || '';
   var tagList = [];
   try { tagList = JSON.parse(raw); } catch(e) { tagList = raw.split(',').map(function(t) { return t.trim(); }).filter(function(t) { return t; }); }
-  if (idx >= 0 && idx < tagList.length) {
-    tagList.splice(idx, 1);
+  if (tagIdx >= 0 && tagIdx < tagList.length) {
+    tagList.splice(tagIdx, 1);
     note.tags = JSON.stringify(tagList);
-    renderTextContent(note, currentImageIndex);
+    renderCurrentImage(note);
+    setTimeout(function() { scrollToCard(noteIdx, false); }, 50);
   }
 });
 
@@ -2614,15 +2666,15 @@ function addTag() {
 }
 
 function scrollToCard(idx, animate) {
-  var track = document.getElementById('noteCardTrack');
-  var cards = track.querySelectorAll('.note-card-item');
-  if (!cards[idx]) return;
+  var track = document.getElementById('noteSlidesTrack');
+  var slides = track.querySelectorAll('.note-slide');
+  if (!slides[idx]) return;
 
-  var card = cards[idx];
+  var slide = slides[idx];
   var trackWidth = track.offsetWidth;
-  var cardLeft = card.offsetLeft;
-  var cardWidth = card.offsetWidth;
-  var scrollTarget = cardLeft - (trackWidth - cardWidth) / 2;
+  var slideLeft = slide.offsetLeft;
+  var slideWidth = slide.offsetWidth;
+  var scrollTarget = slideLeft - (trackWidth - slideWidth) / 2;
 
   if (animate !== false) {
     track.scrollTo({ left: scrollTarget, behavior: 'smooth' });
@@ -2630,10 +2682,9 @@ function scrollToCard(idx, animate) {
     track.scrollLeft = scrollTarget;
   }
 
-  // Update active card style
-  cards.forEach(function(c, i) {
-    c.classList.toggle('active', i === idx);
-  });
+  // Update fixed badge number
+  var badge = document.getElementById('cardBadge');
+  if (badge) badge.textContent = (idx + 1);
 
   // Update dots
   var dots = document.querySelectorAll('.note-card-dot');
@@ -2641,15 +2692,10 @@ function scrollToCard(idx, animate) {
     dot.classList.toggle('active', i === idx);
   });
 
-  // Update text content
-  var note = allNotes.find(function(n) { return n.projectId === currentProjectId; });
-  if (note) {
-    renderTextContent(note, idx);
-  }
-
   currentImageIndex = idx;
 
   // Update save/next buttons
+  var note = allNotes.find(function(n) { return n.projectId === currentProjectId; });
   if (note) {
     var total = (note.imageUrls || []).length;
     var nextBtn = document.getElementById('noteNextBtn');
@@ -2670,33 +2716,31 @@ function scrollToCard(idx, animate) {
   }
 }
 
-// Handle scroll to update active card and text
+// Handle scroll to update active card
 document.addEventListener('DOMContentLoaded', function() {
-  var track = document.getElementById('noteCardTrack');
+  var track = document.getElementById('noteSlidesTrack');
   if (track) {
     var scrollTimer = null;
     track.addEventListener('scroll', function() {
       if (scrollTimer) clearTimeout(scrollTimer);
       scrollTimer = setTimeout(function() {
-        var cards = track.querySelectorAll('.note-card-item');
+        var slides = track.querySelectorAll('.note-slide');
         var trackWidth = track.offsetWidth;
         var scrollLeft = track.scrollLeft;
         var center = scrollLeft + trackWidth / 2;
         var closest = 0;
         var minDist = Infinity;
-        cards.forEach(function(card, idx) {
-          var cardCenter = card.offsetLeft + card.offsetWidth / 2;
-          var dist = Math.abs(cardCenter - center);
+        slides.forEach(function(slide, idx) {
+          var slideCenter = slide.offsetLeft + slide.offsetWidth / 2;
+          var dist = Math.abs(slideCenter - center);
           if (dist < minDist) {
             minDist = dist;
             closest = idx;
           }
         });
         if (closest !== currentImageIndex) {
-          // Update active card style
-          cards.forEach(function(c, i) {
-            c.classList.toggle('active', i === closest);
-          });
+          var badge = document.getElementById('cardBadge');
+          if (badge) badge.textContent = (closest + 1);
 
           var dots = document.querySelectorAll('.note-card-dot');
           dots.forEach(function(dot, i) {
@@ -2704,11 +2748,8 @@ document.addEventListener('DOMContentLoaded', function() {
           });
           currentImageIndex = closest;
 
-          // Update text content
           var note = allNotes.find(function(n) { return n.projectId === currentProjectId; });
           if (note) {
-            renderTextContent(note, closest);
-
             var total = (note.imageUrls || []).length;
             var nextBtn = document.getElementById('noteNextBtn');
             var saveBtn = document.getElementById('noteSaveBtn');
@@ -2753,12 +2794,8 @@ function retryOcr(index) {
   var note = allNotes.find(function(n) { return n.projectId === currentProjectId; });
   if (!note) return;
   if (!note.imageOcrTexts) note.imageOcrTexts = [];
-  var ocrEl = document.getElementById('ncOcrText');
-  saveOcrText(index, ocrEl ? ocrEl.textContent : '');
-  note.imageOcrTexts[index] = '';
   isProcessingNewImport = true;
   var imgUrls = note.imageUrls || [];
-  renderTextContent(note, index);
   showOcrNotice(function() { runTesseractOcr(imgUrls[index], index); });
 }
 
@@ -3012,8 +3049,10 @@ function preprocessImage(img) {
 }
 
 function runTesseractOcr(imageUrl, index) {
-  var ocrEl = document.getElementById('ncOcrText');
-  var retryBtn = document.getElementById('ncOcrRetry');
+  var slides = document.querySelectorAll('.note-slide');
+  var currentSlide = slides[index];
+  var ocrEl = currentSlide ? currentSlide.querySelector('.nc-ocr-text') : null;
+  var retryBtn = currentSlide ? currentSlide.querySelector('.nc-ocr-retry') : null;
   if (!ocrEl) {
     isProcessingNewImport = false;
     return;
@@ -3027,7 +3066,7 @@ function runTesseractOcr(imageUrl, index) {
   setTimeout(function() {
     if (!timedOut) {
       timedOut = true;
-      ocrEl.textContent = '（识别超时，请点击重试）';
+      if (ocrEl) ocrEl.textContent = '（识别超时，请点击重试）';
       isProcessingNewImport = false;
       if (retryBtn) retryBtn.style.display = 'flex';
     }
@@ -3206,7 +3245,8 @@ function confirmTagInput() {
     if (tagList.indexOf(tag) === -1) {
       tagList.push(tag);
       note.tags = JSON.stringify(tagList);
-      renderTextContent(note, currentImageIndex);
+      renderCurrentImage(note);
+      setTimeout(function() { scrollToCard(currentImageIndex, false); }, 50);
     }
   }
 
@@ -3233,8 +3273,12 @@ function toggleNoteTags(el) {
   section.style.display = section.style.display === 'none' ? 'block' : 'none';
   el.innerHTML = section.style.display === 'none' ? '标签 &#9660;' : '标签 &#9650;';
 }
+function openViewer(src) {
+  var img = document.getElementById('viewerImg');
+  img.src = src;
+  document.getElementById('viewer').classList.add('open');
+}
 
-function openViewer() { document.getElementById('viewer').classList.add('open'); }
 function closeViewer() { document.getElementById('viewer').classList.remove('open'); }
 
 // Share Sheet
