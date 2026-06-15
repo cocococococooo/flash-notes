@@ -12,6 +12,8 @@ import {
 interface ImageCardData {
   id: number;
   localUri: string;
+  width: number;
+  height: number;
   ocrText: string;
   aiSummary: string;
   userSummary: string;
@@ -23,9 +25,11 @@ interface Props {
   image: ImageCardData;
   baseUrl: string;
   onUpdate: (id: number, data: { userSummary?: string; tags?: string }) => void;
+  onRetry?: (id: number) => void;
+  onPressImage?: () => void;
 }
 
-export default function ImageCard({ image, baseUrl, onUpdate }: Props) {
+export default function ImageCard({ image, baseUrl, onUpdate, onRetry, onPressImage }: Props) {
   const [ocrExpanded, setOcrExpanded] = useState(false);
   const [summary, setSummary] = useState(image.userSummary || image.aiSummary);
   const [tagsText, setTagsText] = useState(
@@ -56,7 +60,9 @@ export default function ImageCard({ image, baseUrl, onUpdate }: Props) {
 
   return (
     <View style={styles.card}>
-      <Image source={{ uri: imgUri }} style={styles.image} />
+      <TouchableOpacity activeOpacity={0.9} onPress={onPressImage} disabled={!onPressImage}>
+        <Image source={{ uri: imgUri }} style={styles.image} />
+      </TouchableOpacity>
 
       {image.status === "processing" && (
         <View style={styles.overlay}>
@@ -70,7 +76,7 @@ export default function ImageCard({ image, baseUrl, onUpdate }: Props) {
           <Text style={styles.overlayText}>分析失败</Text>
           <TouchableOpacity
             style={styles.retryBtn}
-            onPress={() => onUpdate(image.id, {})}
+            onPress={() => onRetry ? onRetry(image.id) : onUpdate(image.id, {})}
           >
             <Text style={styles.retryText}>重试</Text>
           </TouchableOpacity>
@@ -139,14 +145,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#F0F0EE",
   },
-  image: { width: "100%", height: 200, resizeMode: "cover" },
+  image: { width: "100%", height: 180, resizeMode: "cover" },
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(24,24,27,0.6)",
     justifyContent: "center",
     alignItems: "center",
     gap: 10,
-    top: 200,
+    top: 180,
   },
   overlayError: {
     backgroundColor: "#FFF",

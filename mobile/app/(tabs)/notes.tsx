@@ -1,22 +1,29 @@
-import { useCallback, useState, useMemo } from "react";
+import { useCallback, useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
   FlatList,
   TouchableOpacity,
-  ScrollView,
   StyleSheet,
   ActivityIndicator,
-  Image,
   Modal,
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  StatusBar,
+  Animated,
+  RefreshControl,
+  Alert,
+  Easing,
+  Image,
+  Keyboard,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { api } from "../../services/api";
-import { API_BASE_URL } from "../../constants/config";
 import IconPark from "../../components/IconPark";
+
+const ANDROID_STATUSBAR = Platform.OS === "android" ? StatusBar.currentHeight || 24 : 0;
 
 interface NoteItem {
   id: number;
@@ -29,37 +36,59 @@ interface NoteItem {
   updatedAt: string;
 }
 
+const SERIF_FONT = Platform.select({ ios: "Georgia", android: "serif", default: "serif" });
+
 const FOLDER_COLORS = [
-  { start: "#A855F7", end: "#7C3AED" },
-  { start: "#F97316", end: "#EA580C" },
-  { start: "#3B82F6", end: "#2563EB" },
-  { start: "#10B981", end: "#059669" },
-  { start: "#EC4899", end: "#DB2777" },
-  { start: "#8B5CF6", end: "#6D28D9" },
-  { start: "#F59E0B", end: "#D97706" },
-  { start: "#06B6D4", end: "#0891B2" },
+  { bg: "rgba(255,107,107,0.85)", shine: "rgba(255,255,255,0.12)" },
+  { bg: "rgba(78,205,196,0.85)", shine: "rgba(255,255,255,0.12)" },
+  { bg: "rgba(69,105,144,0.85)", shine: "rgba(255,255,255,0.12)" },
+  { bg: "rgba(126,87,194,0.85)", shine: "rgba(255,255,255,0.12)" },
+  { bg: "rgba(255,166,43,0.85)", shine: "rgba(255,255,255,0.12)" },
+  { bg: "rgba(72,187,120,0.85)", shine: "rgba(255,255,255,0.12)" },
+  { bg: "rgba(237,100,166,0.85)", shine: "rgba(255,255,255,0.12)" },
+  { bg: "rgba(160,120,120,0.85)", shine: "rgba(255,255,255,0.12)" },
 ];
 
-function getFolderColor(id: number) {
-  return FOLDER_COLORS[id % FOLDER_COLORS.length];
+function getFolderColor(title: string) {
+  let hash = 0;
+  for (let i = 0; i < title.length; i++) {
+    hash = ((hash << 5) - hash) + title.charCodeAt(i);
+    hash |= 0;
+  }
+  return FOLDER_COLORS[Math.abs(hash) % FOLDER_COLORS.length];
 }
 
-function stripMarkdown(md: string): string {
-  return md
-    .replace(/!\[.*?\]\(.*?\)/g, "[图片]")
-    .replace(/[#*`\[\]]/g, "")
-    .replace(/\n+/g, " ")
-    .trim();
+function FolderIcon({ title }: { title: string }) {
+  return (
+    <View style={styles.folderArt}>
+      <Image source={require("../../assets/folder.png")} style={styles.folderImage} resizeMode="contain" />
+    </View>
+  );
 }
 
 export default function NotesScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [notes, setNotes] = useState<NoteItem[]>([]);
-  const [projectsList, setProjectsList] = useState<{ id: number; title: string; createdAt: string }[]>([]);
+  const [projectsList, setProjectsList] = useState<{ id: number; title: string; isDefault: number; createdAt: string }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [creating, setCreating] = useState(false);
+  const [renameModalVisible, setRenameModalVisible] = useState(false);
+  const [renameFolderId, setRenameFolderId] = useState<number | null>(null);
+  const [renameFolderName, setRenameFolderName] = useState("");
+  const [renaming, setRenaming] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const sheetAnim = useState(new Animated.Value(400))[0];
+  const renameSheetAnim = useState(new Animated.Value(400))[0];
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener("keyboardDidShow", (e) => setKeyboardHeight(e.endCoordinates.height));
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => setKeyboardHeight(0));
+    return () => { showSub.remove(); hideSub.remove(); };
+  }, []);
 
   const loadNotes = useCallback(async () => {
     try {
@@ -83,51 +112,137 @@ export default function NotesScreen() {
     }, [loadNotes])
   );
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadNotes();
+    setRefreshing(false);
+  }, [loadNotes]);
+
+  const openCreateSheet = () => {
+    setNewFolderName("");
+    sheetAnim.setValue(400);
+    setCreateModalVisible(true);
+    Animated.timing(sheetAnim, {
+      toValue: 0,
+      duration: 280,
+      easing: Easing.bezier(0.22, 1, 0.36, 1),
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const closeCreateSheet = () => {
+    Animated.timing(sheetAnim, {
+      toValue: 400,
+      duration: 250,
+      easing: Easing.bezier(0.22, 1, 0.36, 1),
+      useNativeDriver: true,
+    }).start(() => setCreateModalVisible(false));
+  };
+
   const handleCreateFolder = async () => {
     const title = newFolderName.trim();
     if (!title) return;
     setCreating(true);
     try {
       const project = await api.createProject(title);
-      setProjectsList((prev) => [{ id: project.id, title: project.title, createdAt: project.createdAt }, ...prev]);
-      setCreateModalVisible(false);
-      setNewFolderName("");
+      setProjectsList((prev) => [{ id: project.id, title: project.title, isDefault: project.isDefault, createdAt: project.createdAt }, ...prev]);
+      closeCreateSheet();
     } catch (e: any) {
       console.error(e);
+      Alert.alert("创建失败", e.message || "请重试");
     } finally {
       setCreating(false);
     }
   };
 
+  const handleLongPress = (item: { id: number; title: string; isDefault: number }) => {
+    if (item.isDefault) {
+      Alert.alert("默认文件夹", "这是默认文件夹，无法修改或删除");
+      return;
+    }
+    Alert.alert(item.title, undefined, [
+      {
+        text: "重命名",
+        onPress: () => openRenameSheet(item.id, item.title),
+      },
+      {
+        text: "删除",
+        style: "destructive",
+        onPress: () => confirmDeleteFolder(item.id),
+      },
+      { text: "取消", style: "cancel" },
+    ]);
+  };
+
+  const confirmDeleteFolder = (id: number) => {
+    Alert.alert("确认删除", "删除文件夹后，其中的笔记不会丢失，仍可在全部笔记中查看。", [
+      { text: "取消", style: "cancel" },
+      {
+        text: "删除",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await api.deleteProject(id);
+            setProjectsList((prev) => prev.filter((p) => p.id !== id));
+          } catch (e: any) {
+            Alert.alert("删除失败", e.message || "请重试");
+          }
+        },
+      },
+    ]);
+  };
+
+  const openRenameSheet = (id: number, title: string) => {
+    setRenameFolderId(id);
+    setRenameFolderName(title);
+    setRenameModalVisible(true);
+    setTimeout(() => {
+      renameSheetAnim.setValue(400);
+      Animated.timing(renameSheetAnim, {
+        toValue: 0,
+        duration: 280,
+        easing: Easing.bezier(0.22, 1, 0.36, 1),
+        useNativeDriver: true,
+      }).start();
+    }, 100);
+  };
+
+  const closeRenameSheet = () => {
+    Animated.timing(renameSheetAnim, {
+      toValue: 400,
+      duration: 250,
+      easing: Easing.bezier(0.22, 1, 0.36, 1),
+      useNativeDriver: true,
+    }).start(() => setRenameModalVisible(false));
+  };
+
+  const handleConfirmRename = async () => {
+    if (!renameFolderId || !renameFolderName.trim()) return;
+    setRenaming(true);
+    try {
+      const updated = await api.renameProject(renameFolderId, renameFolderName.trim());
+      setProjectsList((prev) => prev.map((p) => (p.id === renameFolderId ? { ...p, title: updated.title } : p)));
+      closeRenameSheet();
+    } catch (e: any) {
+      Alert.alert("重命名失败", e.message || "请重试");
+    } finally {
+      setRenaming(false);
+    }
+  };
+
   const projects = useMemo(() => {
-    const map = new Map<number, { id: number; title: string; count: number; note: NoteItem | null }>();
-    
+    const map = new Map<number, { id: number; title: string; isDefault: number; count: number }>();
     projectsList.forEach((project) => {
-      map.set(project.id, {
-        id: project.id,
-        title: project.title || "未命名项目",
-        count: 0,
-        note: null,
-      });
+      map.set(project.id, { id: project.id, title: project.title || "未命名项目", isDefault: project.isDefault, count: 0 });
     });
-    
     notes.forEach((note) => {
       const existing = map.get(note.projectId);
       if (existing) {
         existing.count++;
-        if (!existing.note) {
-          existing.note = note;
-        }
       } else {
-        map.set(note.projectId, {
-          id: note.projectId,
-          title: note.projectTitle || "未命名项目",
-          count: 1,
-          note,
-        });
+        map.set(note.projectId, { id: note.projectId, title: note.projectTitle || "未命名项目", isDefault: 0, count: 1 });
       }
     });
-    
     return Array.from(map.values());
   }, [notes, projectsList]);
 
@@ -141,60 +256,47 @@ export default function NotesScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>文件夹</Text>
+      <View style={[styles.header, { paddingTop: insets.top + ANDROID_STATUSBAR + 8 }]}>
+        <View style={styles.headerLeft}>
+          <Text style={styles.title}>文件夹</Text>
+          <Text style={styles.count}>{projects.length} 个</Text>
+        </View>
         <TouchableOpacity
           style={styles.createBtn}
-          onPress={() => setCreateModalVisible(true)}
+          onPress={openCreateSheet}
           activeOpacity={0.7}
         >
-          <IconPark name="plus" size={16} color="#3F3F46" />
+          <IconPark name="plus" size={18} color="#3F3F46" />
         </TouchableOpacity>
       </View>
 
       <FlatList
         data={projects}
         keyExtractor={(item) => String(item.id)}
-        contentContainerStyle={styles.list}
         numColumns={2}
         columnWrapperStyle={styles.row}
-        renderItem={({ item }) => {
-          const colors = getFolderColor(item.id);
-          return (
-            <TouchableOpacity
-              style={styles.folderCard}
-              onPress={() => router.push(`/project/${item.id}`)}
-              activeOpacity={0.85}
-            >
-              <View style={[styles.folderBg, { backgroundColor: colors.start }]}>
-                <View style={[styles.folderBgOverlay, { backgroundColor: colors.end }]} />
-                
-                {/* Paper Stack Effect */}
-                <View style={styles.paperStack}>
-                  <View style={[styles.paper, styles.paper3]} />
-                  <View style={[styles.paper, styles.paper2]} />
-                  <View style={[styles.paper, styles.paper1]} />
-                </View>
-
-                {/* Folder Bottom */}
-                <View style={styles.folderBottom}>
-                  <View style={styles.folderInfo}>
-                    <Text style={styles.folderName} numberOfLines={1}>
-                      {item.title}
-                    </Text>
-                    <Text style={styles.folderCount}>{item.count} 个笔记</Text>
-                  </View>
-                  <TouchableOpacity style={styles.menuBtn} onPress={() => {}}>
-                    <Text style={styles.menuDots}>•••</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </TouchableOpacity>
-          );
-        }}
+        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#18181B" />
+        }
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={styles.folderCard}
+            onPress={() => router.push(`/note-list/${item.id}`)}
+            onLongPress={() => handleLongPress(item)}
+            delayLongPress={400}
+            activeOpacity={0.85}
+          >
+            <FolderIcon title={item.title} />
+            <View style={styles.folderBottom}>
+              <Text style={styles.folderName} numberOfLines={1}>{item.title}</Text>
+              <Text style={styles.folderCount}>{item.count} 个笔记</Text>
+            </View>
+          </TouchableOpacity>
+        )}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <View style={{ marginBottom: 12, opacity: 0.5 }}>
+            <View style={{ marginBottom: 14, opacity: 0.35 }}>
               <IconPark name="folder" size={44} color="#A1A1AA" />
             </View>
             <Text style={styles.empty}>还没有文件夹</Text>
@@ -203,56 +305,78 @@ export default function NotesScreen() {
         }
       />
 
-      {/* Create Folder Modal */}
-      <Modal
-        visible={createModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setCreateModalVisible(false)}
-      >
-        <KeyboardAvoidingView
-          style={styles.modalBg}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-        >
-          <TouchableOpacity
-            style={styles.modalOverlay}
-            activeOpacity={1}
-            onPress={() => setCreateModalVisible(false)}
-          />
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>新建文件夹</Text>
-            <TextInput
-              style={styles.modalInput}
-              value={newFolderName}
-              onChangeText={setNewFolderName}
-              placeholder="输入文件夹名称"
-              placeholderTextColor="#A1A1AA"
-              autoFocus
-              returnKeyType="done"
-              onSubmitEditing={handleCreateFolder}
-            />
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalBtn, styles.modalBtnCancel]}
-                onPress={() => {
-                  setCreateModalVisible(false);
-                  setNewFolderName("");
-                }}
-              >
-                <Text style={styles.modalBtnCancelText}>取消</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalBtn, styles.modalBtnConfirm, !newFolderName.trim() && styles.modalBtnDisabled]}
-                onPress={handleCreateFolder}
-                disabled={creating || !newFolderName.trim()}
-              >
-                <Text style={styles.modalBtnConfirmText}>
-                  {creating ? "创建中..." : "创建"}
-                </Text>
-              </TouchableOpacity>
-            </View>
+      {/* Create Folder Bottom Sheet */}
+      <Modal visible={createModalVisible} transparent animationType="none" onRequestClose={closeCreateSheet}>
+        <View style={styles.sheetOverlay}>
+          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={closeCreateSheet} />
+          <View style={styles.sheetKAV} pointerEvents="box-none">
+            <Animated.View style={[styles.sheetCard, { paddingBottom: insets.bottom + 20, marginBottom: keyboardHeight, transform: [{ translateY: sheetAnim }] }]}>
+              <View style={styles.sheetHandle} />
+              <Text style={styles.sheetTitle}>新建项目</Text>
+              <View style={styles.sheetBody}>
+                <TextInput
+                  style={styles.sheetInput}
+                  value={newFolderName}
+                  onChangeText={setNewFolderName}
+                  placeholder="输入项目名称"
+                  placeholderTextColor="#D4D4D8"
+                  autoFocus
+                  returnKeyType="done"
+                  onSubmitEditing={handleCreateFolder}
+                />
+                <View style={styles.sheetActions}>
+                  <TouchableOpacity style={styles.sheetCancelBtn} onPress={closeCreateSheet}>
+                    <Text style={styles.sheetCancelText}>取消</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.sheetConfirmBtn, !newFolderName.trim() && { opacity: 0.4 }]}
+                    onPress={handleCreateFolder}
+                    disabled={creating || !newFolderName.trim()}
+                  >
+                    <Text style={styles.sheetConfirmText}>{creating ? "创建中..." : "创建"}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Animated.View>
           </View>
-        </KeyboardAvoidingView>
+        </View>
+      </Modal>
+
+      {/* Rename Folder Bottom Sheet */}
+      <Modal visible={renameModalVisible} transparent animationType="none" onRequestClose={closeRenameSheet}>
+        <View style={styles.sheetOverlay}>
+          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={closeRenameSheet} />
+          <View style={styles.sheetKAV} pointerEvents="box-none">
+            <Animated.View style={[styles.sheetCard, { paddingBottom: insets.bottom + 20, marginBottom: keyboardHeight, transform: [{ translateY: renameSheetAnim }] }]}>
+              <View style={styles.sheetHandle} />
+              <Text style={styles.sheetTitle}>重命名项目</Text>
+              <View style={styles.sheetBody}>
+                <TextInput
+                  style={styles.sheetInput}
+                  value={renameFolderName}
+                  onChangeText={setRenameFolderName}
+                  placeholder="输入新的项目名称"
+                  placeholderTextColor="#D4D4D8"
+                  autoFocus
+                  returnKeyType="done"
+                  onSubmitEditing={handleConfirmRename}
+                />
+                <View style={styles.sheetActions}>
+                  <TouchableOpacity style={styles.sheetCancelBtn} onPress={closeRenameSheet}>
+                    <Text style={styles.sheetCancelText}>取消</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.sheetConfirmBtn, !renameFolderName.trim() && { opacity: 0.4 }]}
+                    onPress={handleConfirmRename}
+                    disabled={renaming || !renameFolderName.trim()}
+                  >
+                    <Text style={styles.sheetConfirmText}>{renaming ? "保存中..." : "保存"}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Animated.View>
+          </View>
+        </View>
       </Modal>
     </View>
   );
@@ -261,17 +385,24 @@ export default function NotesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FAFAFA" },
   center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#FAFAFA" },
+
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 20,
+    paddingBottom: 26,
   },
-  title: { fontSize: 26, fontWeight: "700", color: "#18181B" },
+  headerLeft: { flexDirection: "row", alignItems: "baseline", gap: 10 },
+  title: {
+    fontFamily: SERIF_FONT,
+    fontSize: 26,
+    fontWeight: "700",
+    color: "#18181B",
+    letterSpacing: 0.3,
+  },
+  count: { fontSize: 13, color: "#A1A1AA", fontWeight: "500" },
   createBtn: {
-    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "transparent",
@@ -280,148 +411,87 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     width: 36,
     height: 36,
-    padding: 0,
   },
-  list: { paddingHorizontal: 16, paddingBottom: 100 },
+
+  list: { paddingHorizontal: 20, paddingBottom: 100 },
   row: { justifyContent: "space-between" },
 
   folderCard: {
     width: "48%",
+    alignItems: "flex-start",
     marginBottom: 16,
-    borderRadius: 16,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
   },
-  folderBg: {
-    height: 160,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    position: "relative",
+  folderArt: {
+    width: "100%",
+    aspectRatio: 120 / 90,
+    marginBottom: 8,
+    borderRadius: 12,
     overflow: "hidden",
+    backgroundColor: "transparent",
   },
-  folderBgOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.6,
+  folderImage: {
+    width: "100%",
+    height: "100%",
   },
 
-  /* Paper Stack */
-  paperStack: {
-    position: "absolute",
-    top: 12,
-    left: "50%",
-    marginLeft: -40,
-    width: 80,
-    height: 70,
-  },
-  paper: {
-    position: "absolute",
-    width: 56,
-    height: 48,
-    backgroundColor: "rgba(255,255,255,0.9)",
-    borderRadius: 6,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    shadowOffset: { width: 0, height: 1 },
-  },
-  paper1: {
-    top: 0,
-    left: 12,
-    transform: [{ rotate: "-5deg" }],
-    zIndex: 3,
-  },
-  paper2: {
-    top: 4,
-    left: 18,
-    transform: [{ rotate: "2deg" }],
-    zIndex: 2,
-    opacity: 0.85,
-  },
-  paper3: {
-    top: 8,
-    left: 24,
-    transform: [{ rotate: "8deg" }],
-    zIndex: 1,
-    opacity: 0.7,
-  },
-
-  /* Folder Bottom */
   folderBottom: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    padding: 14,
+    paddingHorizontal: 4,
+    paddingTop: 4,
   },
-  folderInfo: { flex: 1 },
   folderName: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#FFF",
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#000",
     marginBottom: 2,
   },
   folderCount: {
     fontSize: 12,
     fontWeight: "500",
-    color: "rgba(255,255,255,0.8)",
-  },
-  menuBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.25)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  menuDots: {
-    color: "#FFF",
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: -1,
+    color: "rgba(0,0,0,0.45)",
   },
 
-  emptyContainer: { alignItems: "center", marginTop: 80 },
+  emptyContainer: { alignItems: "center", paddingTop: 72, paddingHorizontal: 40 },
   empty: { fontSize: 16, fontWeight: "500", color: "#71717A" },
-  emptyHint: { fontSize: 13, color: "#A1A1AA", marginTop: 6, textAlign: "center", paddingHorizontal: 40 },
+  emptyHint: { fontSize: 13, color: "#A1A1AA", marginTop: 6, textAlign: "center", lineHeight: 20 },
 
-  /* Create Folder Modal */
-  modalBg: {
+  /* Bottom Sheet */
+  sheetOverlay: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.35)",
+    justifyContent: "flex-end",
   },
-  modalOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.5)",
-  },
-  modalCard: {
-    width: "85%",
-    maxWidth: 360,
+  sheetKAV: { width: "100%" },
+  sheetCard: {
     backgroundColor: "#FFF",
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 10,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+    paddingTop: 0,
+    paddingBottom: 34,
+    maxWidth: 480,
+    width: "100%",
+    alignSelf: "center",
   },
-  modalTitle: {
-    fontSize: 18,
+  sheetHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#D4D4D8",
+    alignSelf: "center",
+    marginTop: 10,
+    marginBottom: 0,
+  },
+  sheetTitle: {
+    fontSize: 17,
     fontWeight: "700",
     color: "#18181B",
-    marginBottom: 16,
+    paddingTop: 18,
+    paddingBottom: 14,
   },
-  modalInput: {
-    borderWidth: 1,
-    borderColor: "#E4E4E7",
+  sheetBody: { gap: 14 },
+  sheetInput: {
+    borderWidth: 1.5,
+    borderColor: "#ECECEE",
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -429,36 +499,23 @@ const styles = StyleSheet.create({
     color: "#18181B",
     backgroundColor: "#FAFAFA",
   },
-  modalActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 8,
-    marginTop: 16,
-  },
-  modalBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 100,
-    minWidth: 72,
+  sheetActions: { flexDirection: "row", gap: 10 },
+  sheetCancelBtn: {
+    flex: 1,
+    borderWidth: 1.5,
+    borderColor: "#ECECEE",
+    borderRadius: 10,
+    paddingVertical: 13,
     alignItems: "center",
+    backgroundColor: "#FFF",
   },
-  modalBtnCancel: {
-    backgroundColor: "#F4F4F5",
-  },
-  modalBtnCancelText: {
-    color: "#52525B",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  modalBtnConfirm: {
+  sheetCancelText: { fontSize: 15, fontWeight: "600", color: "#52525B" },
+  sheetConfirmBtn: {
+    flex: 1,
+    borderRadius: 10,
+    paddingVertical: 13,
+    alignItems: "center",
     backgroundColor: "#18181B",
   },
-  modalBtnConfirmText: {
-    color: "#FFF",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  modalBtnDisabled: {
-    opacity: 0.4,
-  },
+  sheetConfirmText: { fontSize: 15, fontWeight: "600", color: "#FFF" },
 });

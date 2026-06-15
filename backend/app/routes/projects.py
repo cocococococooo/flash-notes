@@ -1,18 +1,24 @@
 import os
 import uuid
 import threading
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List
+from pydantic import BaseModel
 from app.database import get_db
 from app import models, schemas
 from app.services.ai_service import analyze_image
+from PIL import Image as PILImage
 
 router = APIRouter()
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 ALLOWED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
+
+
+class ProjectUpdate(BaseModel):
+    title: str
 
 
 @router.post("/projects", response_model=schemas.ProjectOut)
@@ -29,21 +35,55 @@ def list_projects(db: Session = Depends(get_db)):
     return db.query(models.Project).order_by(models.Project.createdAt.desc()).all()
 
 
+@router.get("/projects/default", response_model=schemas.ProjectOut)
+def get_or_create_default_project(db: Session = Depends(get_db)):
+    default = db.query(models.Project).filter(models.Project.isDefault == 1).first()
+    if default:
+        return default
+    existing = db.query(models.Project).filter(models.Project.title == "默认文件夹").first()
+    if existing:
+        existing.isDefault = 1
+        db.commit()
+        db.refresh(existing)
+        return existing
+    project = models.Project(title="默认文件夹", isDefault=1)
+    db.add(project)
+    db.commit()
+    db.refresh(project)
+    return project
+
+
+@router.put("/projects/{project_id}", response_model=schemas.ProjectOut)
+def rename_project(project_id: int, data: ProjectUpdate, db: Session = Depends(get_db)):
+    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if not data.title.strip():
+        raise HTTPException(status_code=400, detail="Title cannot be empty")
+    project.title = data.title.strip()
+    db.commit()
+    db.refresh(project)
+    return project
+
+
 @router.delete("/projects/{project_id}", status_code=204)
 def delete_project(project_id: int, db: Session = Depends(get_db)):
     project = db.query(models.Project).filter(models.Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+    if project.isDefault:
+        raise HTTPException(status_code=403, detail="Cannot delete default project")
     images = db.query(models.Image).filter(models.Image.projectId == project_id).all()
     for img in images:
-        if os.path.exists(img.localUri):
-            os.remove(img.localUri)
+        file_path = os.path.join(UPLOAD_DIR, os.path.basename(img.localUri))
+        if os.path.exists(file_path):
+            os.remove(file_path)
     db.delete(project)
     db.commit()
 
 
 @router.post("/projects/{project_id}/images", response_model=List[schemas.ImageOut])
-async def upload_images(project_id: int, files: List[UploadFile] = File(...), db: Session = Depends(get_db)):
+async def upload_images(project_id: int, noteId: int = None, files: List[UploadFile] = File(...), db: Session = Depends(get_db)):
     project = db.query(models.Project).filter(models.Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -59,9 +99,20 @@ async def upload_images(project_id: int, files: List[UploadFile] = File(...), db
         with open(file_path, "wb") as f:
             f.write(content)
 
+        img_w = 0
+        img_h = 0
+        try:
+            with PILImage.open(file_path) as pil_img:
+                img_w, img_h = pil_img.size
+        except Exception:
+            pass
+
         image = models.Image(
             projectId=project_id,
-            localUri=file_path,
+            noteId=noteId,
+            localUri=f"/uploads/{filename}",
+            width=img_w,
+            height=img_h,
             status=models.ImageStatus.processing.value,
         )
         db.add(image)

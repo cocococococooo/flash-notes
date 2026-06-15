@@ -5,16 +5,27 @@ import {
   FlatList,
   TouchableOpacity,
   Alert,
+  Platform,
+  StatusBar,
   StyleSheet,
   ActivityIndicator,
   ScrollView,
+  RefreshControl,
+  Image,
+  Modal,
+  Dimensions,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { api } from "../../services/api";
 import { pickImages } from "../../services/imageUtils";
 import ImageCard from "../../components/ImageCard";
 import IconPark from "../../components/IconPark";
 import { API_BASE_URL, POLL_INTERVAL_MS } from "../../constants/config";
+
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+
+const ANDROID_STATUSBAR = Platform.OS === "android" ? StatusBar.currentHeight || 24 : 0;
 
 interface ImageData {
   id: number;
@@ -30,13 +41,16 @@ export default function ProjectDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const projectId = parseInt(id, 10);
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const [images, setImages] = useState<ImageData[]>([]);
   const [projectTitle, setProjectTitle] = useState("");
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const allTags = useMemo(() => {
@@ -77,6 +91,12 @@ export default function ProjectDetailScreen() {
       return null;
     }
   }, [projectId]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([loadImages(), loadProjectTitle()]);
+    setRefreshing(false);
+  }, [loadImages, loadProjectTitle]);
 
   const loadProjectTitle = useCallback(async () => {
     try {
@@ -142,6 +162,15 @@ export default function ProjectDetailScreen() {
     }
   };
 
+  const handleRetryImage = async (imageId: number) => {
+    try {
+      await api.reanalyzeImage(imageId);
+      await loadImages();
+    } catch (e: any) {
+      Alert.alert("重新识别失败", e.message);
+    }
+  };
+
   const handleGenerateNote = async () => {
     setGenerating(true);
     try {
@@ -167,21 +196,21 @@ export default function ProjectDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
-            <IconPark name="arrowLeft" size={16} color="#18181B" />
-            <Text style={styles.backText}>返回</Text>
-          </View>
+          <IconPark name="arrowLeft" size={16} color="#18181B" />
+          <Text style={styles.backText}>返回</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle} pointerEvents="none">{projectTitle}</Text>
+        <Text style={styles.headerTitle} numberOfLines={1}>
+          {projectTitle} · {images.length} 张图片
+        </Text>
         <TouchableOpacity
           style={[styles.importBtn, uploading && styles.disabled]}
           onPress={handleImport}
           disabled={uploading}
         >
           <Text style={styles.importBtnText}>
-            {uploading ? "上传中..." : "导入"}
+            {uploading ? "上传中..." : "从相册导入"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -190,6 +219,9 @@ export default function ProjectDetailScreen() {
         data={filteredImages}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={styles.list}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#18181B" />
+        }
         ListHeaderComponent={
           allTags.length > 0 ? (
             <View style={styles.tagFilterWrap}>
@@ -237,11 +269,13 @@ export default function ProjectDetailScreen() {
             </View>
           ) : null
         }
-        renderItem={({ item }) => (
+        renderItem={({ item, index }) => (
           <ImageCard
             image={item}
             baseUrl={API_BASE_URL}
             onUpdate={handleUpdateImage}
+            onRetry={handleRetryImage}
+            onPressImage={() => setPreviewIndex(index)}
           />
         )}
         ListEmptyComponent={
@@ -259,7 +293,54 @@ export default function ProjectDetailScreen() {
         }
       />
 
-      <View style={styles.bottomBar}>
+      {/* Image Preview Gallery */}
+      <Modal visible={previewIndex !== null} transparent animationType="fade" onRequestClose={() => setPreviewIndex(null)}>
+        <View style={styles.modalBg}>
+          <TouchableOpacity
+            style={[styles.modalClose, { top: insets.top + 16 }]}
+            onPress={() => setPreviewIndex(null)}
+            activeOpacity={0.7}
+          >
+            <IconPark name="close" size={22} color="#FFF" />
+          </TouchableOpacity>
+          {previewIndex !== null && (
+            <View style={[styles.modalCounter, { top: insets.top + 24 }]}>
+              <Text style={styles.modalCounterText}>{previewIndex + 1} / {images.length}</Text>
+            </View>
+          )}
+          {previewIndex !== null && (
+            <FlatList
+              data={images}
+              keyExtractor={(item) => String(item.id)}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              initialScrollIndex={previewIndex}
+              getItemLayout={(_, index) => ({ length: SCREEN_WIDTH, offset: SCREEN_WIDTH * index, index })}
+              onMomentumScrollEnd={(e) => {
+                const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+                if (idx !== previewIndex && idx >= 0 && idx < images.length) setPreviewIndex(idx);
+              }}
+              style={styles.previewList}
+              contentContainerStyle={styles.previewListContent}
+              renderItem={({ item }) => {
+                const uri = item.localUri.startsWith("http")
+                  ? item.localUri
+                  : item.localUri.startsWith("/")
+                  ? `${API_BASE_URL}${item.localUri}`
+                  : `file:///${item.localUri.replace(/\\/g, "/")}`;
+                return (
+                  <View style={styles.previewItem}>
+                    <Image source={{ uri }} style={styles.previewImage} resizeMode="contain" />
+                  </View>
+                );
+              }}
+            />
+          )}
+        </View>
+      </Modal>
+
+      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 16 }]}>
         <TouchableOpacity
           style={[
             styles.generateBtn,
@@ -288,16 +369,19 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#FAFAFA" },
   topBar: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingTop: 56,
-    paddingBottom: 12,
-    backgroundColor: "#FAFAFA",
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 10,
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#ECECEE",
+    flexShrink: 0,
+    gap: 12,
     position: "relative",
   },
-  backBtn: { paddingVertical: 8, zIndex: 10 },
-  backText: { fontSize: 15, color: "#18181B", fontWeight: "600" },
+  backBtn: { paddingVertical: 8, zIndex: 10, flexDirection: "row", alignItems: "center", gap: 4 },
+  backText: { fontSize: 14, color: "#18181B", fontWeight: "500" },
   headerTitle: {
     fontSize: 17,
     fontWeight: "600",
@@ -306,7 +390,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     textAlign: "center",
-    paddingTop: 56,
+    pointerEvents: "none",
   },
   importBtn: {
     backgroundColor: "#18181B",
@@ -322,7 +406,7 @@ const styles = StyleSheet.create({
   tagChip: {
     paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: 20,
+    borderRadius: 100,
     borderWidth: 1.5,
     borderColor: "#D4D4D8",
     backgroundColor: "#FFF",
@@ -339,7 +423,7 @@ const styles = StyleSheet.create({
   tagChipTextActive: {
     color: "#FFF",
   },
-  list: { paddingHorizontal: 16, paddingBottom: 100 },
+  list: { paddingHorizontal: 16, paddingBottom: 120 },
   emptyContainer: { alignItems: "center", marginTop: 80 },
   empty: { fontSize: 16, fontWeight: "500", color: "#71717A" },
   emptyHint: { fontSize: 13, color: "#A1A1AA", marginTop: 6 },
@@ -349,7 +433,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     padding: 16,
-    paddingBottom: 32,
     backgroundColor: "#FAFAFA",
     borderTopWidth: 1,
     borderTopColor: "#F0F0EE",
@@ -361,4 +444,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   generateBtnText: { color: "#FFF", fontWeight: "700", fontSize: 16, letterSpacing: 0.3 },
+
+  /* Image Preview Gallery */
+  modalBg: { flex: 1, backgroundColor: "rgba(24,24,27,0.92)", justifyContent: "center", alignItems: "center" },
+  modalClose: { position: "absolute", right: 20, zIndex: 10, paddingVertical: 8, paddingHorizontal: 22, borderRadius: 100, backgroundColor: "rgba(255,255,255,0.08)", justifyContent: "center", alignItems: "center" },
+  modalCounter: { position: "absolute", left: 0, right: 0, zIndex: 10, alignItems: "center" },
+  modalCounterText: { color: "rgba(255,255,255,0.85)", fontSize: 13, fontWeight: "500", backgroundColor: "rgba(0,0,0,0.3)", paddingHorizontal: 14, paddingVertical: 6, borderRadius: 100, overflow: "hidden" },
+  previewList: { flex: 1, width: "100%" },
+  previewListContent: { alignItems: "center" },
+  previewItem: { width: SCREEN_WIDTH, flex: 1, justifyContent: "center", alignItems: "center" },
+  previewImage: { width: "90%", height: "80%", borderRadius: 8 },
 });

@@ -1,15 +1,20 @@
 import { API_BASE_URL } from "../constants/config";
+import ReactNativeBlobUtil from "react-native-blob-util";
 
 interface Project {
   id: number;
   title: string;
+  isDefault: number;
   createdAt: string;
 }
 
 interface Image {
   id: number;
   projectId: number;
+  noteId?: number;
   localUri: string;
+  width: number;
+  height: number;
   ocrText: string;
   aiSummary: string;
   userSummary: string;
@@ -20,6 +25,7 @@ interface Image {
 interface Note {
   id: number;
   projectId: number;
+  title: string;
   content: string;
   tags?: string;
   updatedAt: string;
@@ -29,6 +35,7 @@ export interface NoteListItem {
   id: number;
   projectId: number;
   projectTitle: string;
+  title: string;
   content: string;
   tags: string;
   imageCount: number;
@@ -58,40 +65,61 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 export const api = {
   listProjects: () => request<Project[]>("/projects"),
 
+  getDefaultProject: () => request<Project>("/projects/default"),
+
   createProject: (title: string) =>
     request<Project>("/projects", {
       method: "POST",
       body: JSON.stringify({ title }),
     }),
 
+  renameProject: (id: number, title: string) =>
+    request<Project>(`/projects/${id}`, {
+      method: "PUT",
+      body: JSON.stringify({ title }),
+    }),
+
   deleteProject: (id: number) =>
     request<void>(`/projects/${id}`, { method: "DELETE" }),
 
-  uploadImages: (projectId: number, uris: string[]) => {
-    const formData = new FormData();
-    uris.forEach((uri) => {
+  uploadImages: async (projectId: number, uris: string[], noteId?: number) => {
+    const parts = uris.map((uri) => {
       const filename = uri.split("/").pop() || "photo.jpg";
       const ext = filename.split(".").pop() || "jpg";
-      formData.append("files", {
-        uri,
-        name: filename,
-        type: `image/${ext === "png" ? "png" : "jpeg"}`,
-      } as any);
+      return {
+        name: "files",
+        filename,
+        type: ext === "png" ? "image/png" : "image/jpeg",
+        data: ReactNativeBlobUtil.wrap(uri),
+      };
     });
-    return request<Image[]>(`/projects/${projectId}/images`, {
-      method: "POST",
-      body: formData,
-    });
+    const noteParam = noteId ? `?noteId=${noteId}` : "";
+    const res = await ReactNativeBlobUtil.fetch(
+      "POST",
+      `${API_BASE_URL}/projects/${projectId}/images${noteParam}`,
+      { "Content-Type": "multipart/form-data" },
+      parts
+    );
+    const status = res.info().status;
+    if (status < 200 || status >= 300) {
+      throw new Error(`HTTP ${status}: ${res.text()}`);
+    }
+    return res.json();
   },
 
-  listImages: (projectId: number) =>
-    request<Image[]>(`/projects/${projectId}/images`),
+  listImages: (projectId: number, noteId?: number) => {
+    const noteParam = noteId ? `?noteId=${noteId}` : "";
+    return request<Image[]>(`/projects/${projectId}/images${noteParam}`);
+  },
 
   updateImage: (imageId: number, data: { userSummary?: string; tags?: string }) =>
     request<Image>(`/images/${imageId}`, {
       method: "PUT",
       body: JSON.stringify(data),
     }),
+
+  reanalyzeImage: (imageId: number) =>
+    request<Image>(`/images/${imageId}/re-analyze`, { method: "POST" }),
 
   generateNote: (projectId: number) =>
     request<Note>(`/projects/${projectId}/generate-note`, {
@@ -103,10 +131,31 @@ export const api = {
   getNote: (projectId: number) =>
     request<Note>(`/projects/${projectId}/note`),
 
+  getNoteById: (noteId: number) =>
+    request<Note>(`/notes/${noteId}`),
+
+  createNote: (projectId: number, title?: string, content?: string, tags?: string) =>
+    request<Note>(`/notes`, {
+      method: "POST",
+      body: JSON.stringify({ projectId, title: title || "默认笔记", content: content || "", tags: tags || "[]" }),
+    }),
+
   updateNote: (projectId: number, content: string, tags?: string) =>
     request<Note>(`/projects/${projectId}/note`, {
       method: "PUT",
       body: JSON.stringify({ content, tags }),
+    }),
+
+  updateNoteById: (noteId: number, content: string, tags?: string) =>
+    request<Note>(`/notes/${noteId}`, {
+      method: "PUT",
+      body: JSON.stringify({ content, tags }),
+    }),
+
+  updateNoteTitle: (noteId: number, title: string) =>
+    request<Note>(`/notes/${noteId}`, {
+      method: "PUT",
+      body: JSON.stringify({ title }),
     }),
 
   createShareLink: (noteId: number) =>

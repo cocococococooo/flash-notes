@@ -82,7 +82,7 @@ def create_note(project_id: int, db: Session = Depends(get_db)):
     if note:
         note.content = content
     else:
-        note = models.Note(projectId=project_id, content=content, tags=json.dumps(list(image_tags), ensure_ascii=False))
+        note = models.Note(projectId=project_id, title="默认笔记", content=content, tags=json.dumps(list(image_tags), ensure_ascii=False))
         db.add(note)
 
     db.commit()
@@ -113,6 +113,7 @@ def list_all_notes(db: Session = Depends(get_db)):
                 id=n.id,
                 projectId=n.projectId,
                 projectTitle=n.project.title,
+                title=n.title,
                 content=n.content[:200] if n.content else "",
                 tags=_aggregate_note_tags(n, db),
                 imageCount=image_count,
@@ -131,11 +132,53 @@ def get_note(project_id: int, db: Session = Depends(get_db)):
     return note
 
 
+@router.get("/notes/{note_id}", response_model=schemas.NoteOut)
+def get_note_by_id(note_id: int, db: Session = Depends(get_db)):
+    note = db.query(models.Note).filter(models.Note.id == note_id).first()
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    return note
+
+
+@router.post("/notes", response_model=schemas.NoteOut)
+def create_note_direct(data: schemas.NoteCreate, db: Session = Depends(get_db)):
+    project = db.query(models.Project).filter(models.Project.id == data.projectId).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    note = models.Note(projectId=data.projectId, title=data.title or "默认笔记", content=data.content or "", tags=data.tags or "[]")
+    db.add(note)
+    db.commit()
+    db.refresh(note)
+    return note
+
+
+@router.put("/notes/{note_id}", response_model=schemas.NoteOut)
+def update_note_by_id(note_id: int, data: schemas.NoteUpdate, db: Session = Depends(get_db)):
+    note = db.query(models.Note).filter(models.Note.id == note_id).first()
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    if data.title is not None:
+        note.title = data.title
+    if data.content is not None:
+        note.content = data.content
+    if data.tags is not None:
+        note.tags = data.tags
+    db.commit()
+    db.refresh(note)
+    return note
+
+
 @router.put("/projects/{project_id}/note", response_model=schemas.NoteOut)
 def update_note(project_id: int, data: schemas.NoteUpdate, db: Session = Depends(get_db)):
     note = db.query(models.Note).filter(models.Note.projectId == project_id).first()
     if not note:
-        raise HTTPException(status_code=404, detail="Note not found")
+        note = models.Note(projectId=project_id, content=data.content or "", tags=data.tags or "[]")
+        db.add(note)
+        db.commit()
+        db.refresh(note)
+        return note
+    if data.title is not None:
+        note.title = data.title
     if data.content is not None:
         note.content = data.content
     if data.tags is not None:

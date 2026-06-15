@@ -39,6 +39,25 @@ export default function IconPark({ name, size = 24, color = "#18181B" }: IconPro
           <Path d="M5 10C5 8.89543 5.89543 8 7 8L19 8L23 14H41C42.1046 14 43 14.8954 43 16V40C43 41.1046 42.1046 42 41 42H7C5.89543 42 5 41.1046 5 40V10Z" stroke={color} strokeWidth="4" strokeLinejoin="round" />
         </Svg>
       );
+    case "folderFilled":
+      return (
+        <Svg width={size} height={size} viewBox="0 0 48 48" fill="none">
+          <Path d="M5 10C5 8.89543 5.89543 8 7 8L19 8L23 14H41C42.1046 14 43 14.8954 43 16V40C43 41.1046 42.1046 42 41 42H7C5.89543 42 5 41.1046 5 40V10Z" fill={color} stroke={color} strokeWidth="4" strokeLinejoin="round" />
+        </Svg>
+      );
+    case "folderSm":
+      return (
+        <Svg width={size} height={size} viewBox="0 0 48 48" fill="none">
+          <Path d="M5 10C5 8.89543 5.89543 8 7 8L19 8L23 14H41C42.1046 14 43 14.8954 43 16V40C43 41.1046 42.1046 42 41 42H7C5.89543 42 5 41.1046 5 40V10Z" stroke={color} strokeWidth="4" strokeLinejoin="round" />
+        </Svg>
+      );
+    case "homeFilled":
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+          <Path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+          <Path d="M9 22V12h6v10" stroke="#FFF" strokeWidth="2" fill="none" />
+        </Svg>
+      );
     case "write":
       return (
         <Svg width={size} height={size} viewBox="0 0 48 48" fill="none">

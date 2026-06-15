@@ -1,141 +1,112 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  TextInput,
-  Alert,
-  StyleSheet,
-  ActivityIndicator,
-  Pressable,
-  Animated,
-  Dimensions,
-  Image,
-} from "react-native";
+import { View, Text, FlatList, TouchableOpacity, Platform, StatusBar, StyleSheet, ActivityIndicator, Animated, Image, RefreshControl, Alert } from "react-native";
+import AnimatedRN, { useSharedValue, useDerivedValue, useAnimatedStyle, withTiming, Easing } from "react-native-reanimated";
 import { useRouter, useFocusEffect } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { api } from "../../services/api";
 import { pickImages } from "../../services/imageUtils";
 import IconPark from "../../components/IconPark";
-import { API_BASE_URL, POLL_INTERVAL_MS } from "../../constants/config";
+import { POLL_INTERVAL_MS } from "../../constants/config";
 import { getRecentNotes, addRecentNote } from "../../services/recentNotes";
 
-const { width: SCREEN_W } = Dimensions.get("window");
-const CARD_W = 240;
+const ANDROID_STATUSBAR = Platform.OS === "android" ? StatusBar.currentHeight || 24 : 0;
+
+const CARD_W = 150;
 const CARD_H = 150;
 
-interface Project {
-  id: number;
-  title: string;
-  createdAt: string;
-}
-
-interface ImageData {
-  id: number;
-  projectId: number;
-  localUri: string;
-  ocrText: string;
-  aiSummary: string;
-  tags: string;
-  status: string;
-}
-
 const CAROUSEL_ITEMS = [
-  { bg: ["#667eea", "#764ba2"], label: "笔记预览" },
-  { bg: ["#f093fb", "#f5576c"], label: "知识整理" },
-  { bg: ["#4facfe", "#00f2fe"], label: "AI 总结" },
-  { bg: ["#43e97b", "#38f9d7"], label: "标签分类" },
-  { bg: ["#fa709a", "#fee140"], label: "快速检索" },
+  { src: require("../../assets/carousel-1.jpg") },
+  { src: require("../../assets/carousel-2.jpg") },
+  { src: require("../../assets/carousel-3.jpg") },
+  { src: require("../../assets/carousel-4.jpg") },
+  { src: require("../../assets/carousel-5.jpg") },
 ];
 
-function CarouselCard({ item, index, currentIndex }: { item: typeof CAROUSEL_ITEMS[0]; index: number; currentIndex: number }) {
-  const diff = index - currentIndex;
-  const absDiff = Math.abs(diff);
+const POSITIONS = [
+  { x: -130, scale: 0.6, opacity: 0.45, zIndex: 2, border: 3, shadowSmall: true },
+  { x: -70, scale: 0.8, opacity: 1, zIndex: 3, border: 3, shadowSmall: true },
+  { x: 0, scale: 0.95, opacity: 1, zIndex: 5, border: 6, shadowSmall: false },
+  { x: 70, scale: 0.8, opacity: 1, zIndex: 3, border: 3, shadowSmall: true },
+  { x: 130, scale: 0.6, opacity: 0.45, zIndex: 2, border: 3, shadowSmall: true },
+];
 
-  let translateY = 0, scale = 1, rotate = "0deg", opacity = 1, zIndex = 100;
-  if (diff === 0) {
-    translateY = 0; scale = 1; rotate = "0deg"; opacity = 1; zIndex = 100;
-  } else if (absDiff === 1) {
-    translateY = diff * 55; scale = 0.82; rotate = `${diff * 8}deg`; opacity = 0.65; zIndex = 99;
-  } else if (absDiff === 2) {
-    translateY = diff * 55; scale = 0.68; rotate = `${diff * 15}deg`; opacity = 0.45; zIndex = 98;
-  } else {
-    translateY = diff > 0 ? 170 : -170; scale = 0.55; rotate = `${diff * 20}deg`; opacity = 0; zIndex = 97;
-  }
+const SERIF_FONT = Platform.select({ ios: "Georgia", android: "serif", default: "serif" });
+
+function CarouselCard({ item, index, centerIndex }: { item: typeof CAROUSEL_ITEMS[0]; index: number; centerIndex: number }) {
+  const n = CAROUSEL_ITEMS.length;
+  const offset = ((index - centerIndex + n) % n) - 2;
+  const pos = POSITIONS[offset + 2];
+  const isCenter = offset === 0;
+
+  const targetX = useSharedValue(pos.x);
+  const targetScale = useSharedValue(pos.scale);
+  const targetOpacity = useSharedValue(pos.opacity);
+  const targetOverlay = useSharedValue(isCenter ? 0.2 : 0.13);
+
+  targetX.value = pos.x;
+  targetScale.value = pos.scale;
+  targetOpacity.value = pos.opacity;
+  targetOverlay.value = isCenter ? 0.2 : 0.13;
+
+  const easing = Easing.bezier(0.25, 0.1, 0.25, 1);
+
+  const animX = useDerivedValue(() => withTiming(targetX.value, { duration: 900, easing }));
+  const animScale = useDerivedValue(() => withTiming(targetScale.value, { duration: 900, easing }));
+  const animOpacity = useDerivedValue(() => withTiming(targetOpacity.value, { duration: 900, easing }));
+  const animOverlay = useDerivedValue(() => withTiming(targetOverlay.value, { duration: 900, easing }));
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: animX.value }, { scale: animScale.value }],
+    opacity: animOpacity.value,
+  }));
+
+  const overlayStyle = useAnimatedStyle(() => ({
+    opacity: animOverlay.value,
+  }));
 
   return (
-    <Animated.View
+    <AnimatedRN.View
       style={[
         styles.carouselCard,
+        animatedStyle,
         {
-          transform: [{ translateY }, { scale }, { rotate }],
-          opacity,
-          zIndex,
+          zIndex: pos.zIndex,
+          borderWidth: pos.border,
+          borderColor: isCenter ? "rgba(255,255,255,1)" : "rgba(255,255,255,0.5)",
+          shadowColor: "#000",
+          shadowOpacity: pos.shadowSmall ? 0.035 : 0.11,
+          shadowRadius: pos.shadowSmall ? 18 : 40,
+          shadowOffset: { width: 0, height: pos.shadowSmall ? 6 : 28 },
         },
       ]}
-      pointerEvents={diff === 0 ? "auto" : "none"}
     >
-      <View style={[styles.cardGradient, { backgroundColor: item.bg[0] }]}>
-        <View style={[styles.cardGradientOverlay, { backgroundColor: item.bg[1] }]} />
-        <Text style={styles.cardLabel}>{item.label}</Text>
-      </View>
-    </Animated.View>
+      <Image source={item.src} style={styles.cardImage} resizeMode="cover" />
+      <AnimatedRN.View style={[styles.cardOverlay, overlayStyle]} />
+    </AnimatedRN.View>
   );
 }
 
-function ImageResultCard({ image }: { image: ImageData }) {
-  const [expanded, setExpanded] = useState(false);
-
-  const imgUri = image.localUri.startsWith("http")
-    ? image.localUri
-    : image.localUri.startsWith("/")
-    ? `${API_BASE_URL}${image.localUri}`
-    : `file:///${image.localUri.replace(/\\/g, "/")}`;
-
-  return (
-    <View style={styles.resultCard}>
-      <Image source={{ uri: imgUri }} style={styles.resultImage} />
-      {image.status === "processing" && (
-        <View style={styles.resultOverlay}>
-          <ActivityIndicator color="#FFF" size="small" />
-          <Text style={styles.resultOverlayText}>识别中...</Text>
-        </View>
-      )}
-      {image.status === "failed" && (
-        <View style={styles.resultOverlay}>
-          <Text style={styles.resultOverlayText}>识别失败</Text>
-        </View>
-      )}
-      {image.status === "done" && image.ocrText ? (
-        <TouchableOpacity
-          style={styles.resultTextWrap}
-          onPress={() => setExpanded(!expanded)}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.resultTextLabel}>
-            {expanded ? "收起" : "识别结果"} ▾
-          </Text>
-          {expanded && (
-            <Text style={styles.resultText}>{image.ocrText}</Text>
-          )}
-        </TouchableOpacity>
-      ) : null}
-    </View>
-  );
+function formatTime(ts: number) {
+  const diff = Date.now() - ts;
+  if (diff < 60000) return "刚刚";
+  if (diff < 3600000) return `${Math.floor(diff / 60000)} 分钟前`;
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)} 小时前`;
+  return new Date(ts).toLocaleDateString("zh-CN");
 }
 
 export default function HomeScreen() {
   const router = useRouter();
-  const [projects, setProjects] = useState<Project[]>([]);
+  const insets = useSafeAreaInsets();
+  const [projects, setProjects] = useState<{ id: number; title: string; createdAt: string }[]>([]);
   const [loading, setLoading] = useState(true);
-  const [newTitle, setNewTitle] = useState("");
-  const [creating, setCreating] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [importing, setImporting] = useState(false);
-  const [carouselIndex, setCarouselIndex] = useState(0);
-  const [importedImages, setImportedImages] = useState<ImageData[]>([]);
-  const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
-  const [recentNotes, setRecentNotes] = useState<{ id: number; title: string; timestamp: number }[]>([]);
+  const [carouselIndex, setCarouselIndex] = useState(2);
+  const [recentNotes, setRecentNotes] = useState<{ noteId: number; projectId: number; title: string; timestamp: number; imageCount: number }[]>([]);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const carouselTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const heroOpacity = useRef(new Animated.Value(0)).current;
+  const heroTranslate = useRef(new Animated.Value(12)).current;
 
   const loadProjects = useCallback(async () => {
     try {
@@ -153,16 +124,32 @@ export default function HomeScreen() {
     setRecentNotes(recent);
   }, []);
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([loadProjects(), loadRecentNotes()]);
+    setRefreshing(false);
+  }, [loadProjects, loadRecentNotes]);
+
   useFocusEffect(
     useCallback(() => {
       loadProjects();
       loadRecentNotes();
-    }, [loadProjects, loadRecentNotes])
+      heroOpacity.setValue(0);
+      heroTranslate.setValue(12);
+      Animated.parallel([
+        Animated.timing(heroOpacity, { toValue: 1, duration: 450, useNativeDriver: true }),
+        Animated.timing(heroTranslate, { toValue: 0, duration: 450, useNativeDriver: true }),
+      ]).start();
+    }, [loadProjects, loadRecentNotes, heroOpacity, heroTranslate])
   );
 
   useEffect(() => {
+    carouselTimer.current = setInterval(() => {
+      setCarouselIndex((i) => (i + 1) % CAROUSEL_ITEMS.length);
+    }, 2000);
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
+      if (carouselTimer.current) clearInterval(carouselTimer.current);
     };
   }, []);
 
@@ -171,7 +158,6 @@ export default function HomeScreen() {
     pollingRef.current = setInterval(async () => {
       try {
         const data = await api.listImages(projectId);
-        setImportedImages(data);
         if (data.every((img) => img.status !== "processing")) {
           if (pollingRef.current) clearInterval(pollingRef.current);
         }
@@ -181,75 +167,36 @@ export default function HomeScreen() {
     }, POLL_INTERVAL_MS);
   }, []);
 
-  const handleCreate = async () => {
-    const title = newTitle.trim();
-    if (!title) return;
-    setCreating(true);
-    try {
-      const project = await api.createProject(title);
-      setNewTitle("");
-      router.push(`/project/${project.id}`);
-    } catch (e: any) {
-      Alert.alert("错误", e.message);
-    } finally {
-      setCreating(false);
-    }
-  };
-
-  const handleDelete = (project: Project) => {
-    Alert.alert("确认删除", `删除"${project.title}"及其所有数据？`, [
-      { text: "取消", style: "cancel" },
-      {
-        text: "删除",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await api.deleteProject(project.id);
-            await loadProjects();
-          } catch (e: any) {
-            Alert.alert("错误", e.message);
-          }
-        },
-      },
-    ]);
-  };
-
   const handleQuickImport = async () => {
     try {
       setImporting(true);
-      let targetProjectId: number;
-      if (projects.length > 0) {
-        targetProjectId = projects[0].id;
-      } else {
-        const project = await api.createProject("学习笔记");
-        targetProjectId = project.id;
-        await loadProjects();
-      }
+      const defaultProj = await api.getDefaultProject();
+      const targetProjectId = defaultProj.id;
       const uris = await pickImages();
       if (uris.length === 0) {
         setImporting(false);
         return;
       }
-      const uploaded = await api.uploadImages(targetProjectId, uris);
-      setActiveProjectId(targetProjectId);
-      setImportedImages(uploaded.map((img) => ({
-        ...img,
-        projectId: targetProjectId,
-      })));
-      startPolling(targetProjectId);
+      const noteData = await api.getNote(targetProjectId).catch(() => null);
+      let noteId: number;
+      let noteTitle: string;
+      if (noteData) {
+        noteId = noteData.id;
+        noteTitle = noteData.title || "默认笔记";
+      } else {
+        const created = await api.createNote(targetProjectId, "默认笔记", "", "[]");
+        noteId = created.id;
+        noteTitle = created.title || "默认笔记";
+      }
+      await api.uploadImages(targetProjectId, uris, noteId);
+      addRecentNote(noteId, targetProjectId, noteTitle, uris.length);
+      startPolling(targetProjectId, noteId);
+      router.push({ pathname: "/note/[id]", params: { id: String(noteId), fromRecent: "true" } });
     } catch (e: any) {
-      Alert.alert("导入失败", e.message);
+      Alert.alert("导入失败", e.message || "未知错误");
     } finally {
       setImporting(false);
     }
-  };
-
-  const carouselPrev = () => {
-    setCarouselIndex((i) => (i - 1 + CAROUSEL_ITEMS.length) % CAROUSEL_ITEMS.length);
-  };
-
-  const carouselNext = () => {
-    setCarouselIndex((i) => (i + 1) % CAROUSEL_ITEMS.length);
   };
 
   if (loading) {
@@ -262,155 +209,76 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.hero}>
-        <Text style={styles.badge}>AI POWERED</Text>
-        <Text style={styles.title}>闪记</Text>
-        <Text style={styles.subtitle}>导入截图，自动识别提取文本</Text>
-      </View>
+      <FlatList
+        data={recentNotes}
+        keyExtractor={(item) => String(item.noteId)}
+        contentContainerStyle={styles.scroll}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#18181B" />
+        }
+        ListHeaderComponent={
+          <View>
+            <Animated.View style={[styles.hero, { marginTop: insets.top + ANDROID_STATUSBAR + 12, opacity: heroOpacity, transform: [{ translateY: heroTranslate }] }]}>
+              <Text style={styles.title}>闪记</Text>
+              <Text style={styles.subtitle}>导入截图，自动识别提取文本</Text>
+            </Animated.View>
 
-      {/* 3D Carousel */}
-      {importedImages.length === 0 && (
-        <View style={styles.carouselSection}>
-          <View style={styles.carouselWrap}>
-            <TouchableOpacity style={[styles.navBtn, { left: 8 }]} onPress={carouselPrev} activeOpacity={0.7}>
-              <Text style={styles.navBtnText}>‹</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.navBtn, { right: 8 }]} onPress={carouselNext} activeOpacity={0.7}>
-              <Text style={styles.navBtnText}>›</Text>
-            </TouchableOpacity>
-            {CAROUSEL_ITEMS.map((item, i) => (
-              <CarouselCard key={i} item={item} index={i} currentIndex={carouselIndex} />
-            ))}
-          </View>
-          <Text style={styles.carouselCounter}>{carouselIndex + 1} / {CAROUSEL_ITEMS.length}</Text>
-        </View>
-      )}
+            <View style={styles.carouselSection}>
+              <View style={styles.carouselWrap}>
+                {CAROUSEL_ITEMS.map((item, i) => (
+                  <CarouselCard key={i} item={item} index={i} centerIndex={carouselIndex} />
+                ))}
+              </View>
+            </View>
 
-      {/* Import Button */}
-      <View style={styles.importSection}>
-        <TouchableOpacity
-          style={[styles.importBtnSlim, importing && styles.disabled]}
-          onPress={handleQuickImport}
-          disabled={importing}
-          activeOpacity={0.8}
-        >
-          <IconPark name="camera" size={18} color="#FFF" />
-          <Text style={styles.importBtnSlimText}>
-            {importing ? "导入中..." : "从相册导入截图"}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Recent Notes */}
-      {recentNotes.length > 0 && importedImages.length === 0 && (
-        <View style={styles.recentSection}>
-          <Text style={styles.sectionTitle}>最近访问</Text>
-          <FlatList
-            data={recentNotes}
-            keyExtractor={(item) => String(item.id)}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.recentList}
-            renderItem={({ item }) => (
+            <View style={styles.importSection}>
               <TouchableOpacity
-                style={styles.recentCard}
-                onPress={() => {
-                  addRecentNote(item.id, item.title);
-                  router.push({ pathname: "/note/[id]", params: { id: item.id, fromRecent: "true" } });
-                }}
-                activeOpacity={0.7}
+                style={[styles.importBtnSlim, importing && styles.disabled]}
+                onPress={handleQuickImport}
+                disabled={importing}
+                activeOpacity={0.8}
               >
-                <View style={styles.recentIcon}>
-                  <IconPark name="edit" size={18} color="#71717A" />
-                </View>
-                <Text style={styles.recentTitle} numberOfLines={1}>{item.title}</Text>
-              </TouchableOpacity>
-            )}
-          />
-        </View>
-      )}
-
-      {/* Imported Images with OCR Results */}
-      {importedImages.length > 0 && (
-        <View style={styles.resultsSection}>
-          <View style={styles.resultsHeader}>
-            <Text style={styles.resultsTitle}>
-              已导入 {importedImages.length} 张截图
-            </Text>
-            {activeProjectId && (
-              <TouchableOpacity onPress={() => router.push(`/project/${activeProjectId}`)}>
-                <Text style={styles.viewProject}>查看项目 →</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-          <FlatList
-            data={importedImages}
-            keyExtractor={(item) => String(item.id)}
-            renderItem={({ item }) => <ImageResultCard image={item} />}
-            contentContainerStyle={styles.resultsList}
-            showsVerticalScrollIndicator={false}
-          />
-        </View>
-      )}
-
-      {/* Create Project Section */}
-      {importedImages.length === 0 && (
-        <>
-          <View style={styles.createSection}>
-            <Text style={styles.sectionTitle}>学习项目</Text>
-            <View style={styles.createRow}>
-              <TextInput
-                style={styles.input}
-                placeholder="新建项目，输入标题..."
-                placeholderTextColor="#999"
-                value={newTitle}
-                onChangeText={setNewTitle}
-                onSubmitEditing={handleCreate}
-              />
-              <TouchableOpacity
-                style={[styles.createBtn, creating && styles.disabled]}
-                onPress={handleCreate}
-                disabled={creating}
-              >
-                <Text style={styles.createBtnText}>+</Text>
+                <IconPark name="camera" size={18} color="#FFF" />
+                <Text style={styles.importBtnSlimText}>
+                  {importing ? "导入中..." : "从相册导入截图"}
+                </Text>
               </TouchableOpacity>
             </View>
-          </View>
 
-          <FlatList
-            data={projects}
-            keyExtractor={(item) => String(item.id)}
-            contentContainerStyle={styles.list}
-            renderItem={({ item }) => (
-              <Pressable
-                style={styles.card}
-                onPress={() => router.push(`/project/${item.id}`)}
-                onLongPress={() => handleDelete(item)}
-              >
-                <View style={styles.cardIcon}>
-                  <IconPark name="folder" size={22} color="#71717A" />
-                </View>
-                <View style={styles.cardContent}>
-                  <Text style={styles.cardTitle}>{item.title}</Text>
-                  <Text style={styles.cardDate}>
-                    {new Date(item.createdAt).toLocaleDateString("zh-CN")}
-                  </Text>
-                </View>
-                <IconPark name="arrowRight" size={18} color="#D4D4D8" />
-              </Pressable>
-            )}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <View style={{ marginBottom: 10, opacity: 0.5 }}>
-                  <IconPark name="write" size={36} color="#A1A1AA" />
-                </View>
-                <Text style={styles.empty}>还没有学习项目</Text>
-                <Text style={styles.emptyHint}>输入标题创建一个吧</Text>
-              </View>
-            }
-          />
-        </>
-      )}
+            <Text style={styles.sectionLabel}>最近访问</Text>
+          </View>
+        }
+        renderItem={({ item, index }) => (
+          <TouchableOpacity
+            style={[styles.projectCard, index === recentNotes.length - 1 && { marginBottom: 0 }]}
+            onPress={() => {
+              addRecentNote(item.noteId, item.projectId, item.title, item.imageCount);
+              router.push({ pathname: "/note/[id]", params: { id: String(item.noteId), fromRecent: "true" } });
+            }}
+            activeOpacity={0.85}
+          >
+            <View style={styles.projectCardIcon}>
+              <IconPark name="image" size={18} color="#52525B" />
+            </View>
+            <View style={styles.projectCardBody}>
+              <Text style={styles.projectCardTitle} numberOfLines={1}>{item.title || "笔记"}</Text>
+              <Text style={styles.projectCardDesc} numberOfLines={1}>
+                {`${item.imageCount} 张图片 · ${formatTime(item.timestamp)}`}
+              </Text>
+            </View>
+            <View style={styles.projectCardArrow}>
+              <IconPark name="arrowRight" size={16} color="#D4D4D8" />
+            </View>
+          </TouchableOpacity>
+        )}
+        ListEmptyComponent={
+          <View style={styles.emptyProjects}>
+            <Text style={styles.emptyProjectsTitle}>暂无最近访问</Text>
+            <Text style={styles.emptyProjectsHint}>打开笔记后会显示在这里</Text>
+          </View>
+        }
+        ListFooterComponent={<View style={{ height: insets.bottom + 100 }} />}
+      />
     </View>
   );
 }
@@ -418,220 +286,119 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FAFAFA" },
   center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#FAFAFA" },
-  hero: { paddingTop: 20, paddingHorizontal: 16, marginBottom: 20 },
-  badge: {
-    fontSize: 10,
-    fontWeight: "600",
+  scroll: { paddingBottom: 20 },
+  hero: { paddingHorizontal: 20, paddingTop: 12, marginBottom: 28 },
+  title: {
+    fontFamily: SERIF_FONT,
+    fontSize: 34,
+    fontWeight: "700",
     color: "#18181B",
-    letterSpacing: 4,
-    marginBottom: 10,
+    letterSpacing: 0.5,
   },
-  title: { fontSize: 34, fontWeight: "700", color: "#18181B" },
   subtitle: { fontSize: 14, color: "#A1A1AA", marginTop: 8, lineHeight: 22 },
 
   /* Carousel */
-  carouselSection: { marginBottom: 20 },
+  carouselSection: { width: "100%", height: 240, marginBottom: 8 },
   carouselWrap: {
     width: "100%",
-    height: 190,
+    height: 240,
     alignItems: "center",
     justifyContent: "center",
   },
   carouselCard: {
     position: "absolute",
+    left: "50%",
+    top: "50%",
+    marginLeft: -CARD_W / 2,
+    marginTop: -CARD_H / 2,
     width: CARD_W,
     height: CARD_H,
     borderRadius: 24,
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
-  },
-  cardGradient: {
-    flex: 1,
-    borderRadius: 24,
-    overflow: "hidden",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cardGradientOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.6,
-  },
-  cardLabel: {
-    color: "#FFF",
-    fontSize: 16,
-    fontWeight: "600",
-    letterSpacing: 1,
-    textShadowColor: "rgba(0,0,0,0.15)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
-    zIndex: 1,
-  },
-  navBtn: {
-    position: "absolute",
-    top: "50%",
-    marginTop: -18,
-    zIndex: 200,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.73)",
-    borderWidth: 1.5,
-    borderColor: "rgba(255,255,255,0.6)",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  navBtnText: { fontSize: 22, color: "#18181B", fontWeight: "400", marginTop: -2 },
-  carouselCounter: {
-    textAlign: "center",
-    fontSize: 12,
-    color: "#A1A1AA",
-    fontWeight: "500",
-    letterSpacing: 1,
-    marginTop: 8,
-  },
-
-  /* Import button slim */
-  importSection: { paddingHorizontal: 16, marginBottom: 20 },
-  importBtnSlim: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: "#18181B",
-    borderRadius: 100,
-    paddingVertical: 14,
-    width: "100%",
-    shadowColor: "#18181B",
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
-  },
-  importBtnSlimText: { color: "#FFF", fontWeight: "600", fontSize: 14, letterSpacing: 0.5 },
-
-  /* Recent notes */
-  recentSection: { paddingHorizontal: 16, marginBottom: 20 },
-  recentList: { gap: 12 },
-  recentCard: {
-    width: 120,
-    backgroundColor: "#FFF",
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "#ECECEE",
-    alignItems: "center",
-  },
-  recentIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
     backgroundColor: "#F4F4F5",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
+    borderWidth: 6,
+    borderColor: "#FFF",
+    elevation: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 28 },
+    shadowOpacity: 0.11,
+    shadowRadius: 40,
   },
-  recentTitle: { fontSize: 12, fontWeight: "500", color: "#18181B", textAlign: "center" },
-
-  /* Results section */
-  resultsSection: { flex: 1, paddingHorizontal: 16 },
-  resultsHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  resultsTitle: { fontSize: 13, fontWeight: "600", color: "#A1A1AA", letterSpacing: 1 },
-  viewProject: { fontSize: 13, color: "#18181B", fontWeight: "500" },
-  resultsList: { paddingBottom: 20 },
-
-  resultCard: {
-    backgroundColor: "#FFF",
-    borderRadius: 14,
-    marginBottom: 14,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "#ECECEE",
-  },
-  resultImage: { width: "100%", height: 180, resizeMode: "cover" },
-  resultOverlay: {
+  cardImage: {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
-    height: 180,
-    backgroundColor: "rgba(24,24,27,0.55)",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 8,
+    bottom: 0,
+    width: "100%",
+    height: "100%",
   },
-  resultOverlayText: { color: "#FFF", fontSize: 13, fontWeight: "500" },
-  resultTextWrap: { padding: 12 },
-  resultTextLabel: { fontSize: 12, fontWeight: "600", color: "#18181B", marginBottom: 4 },
-  resultText: {
-    fontSize: 13,
-    color: "#52525B",
-    lineHeight: 20,
-    marginTop: 4,
-    backgroundColor: "#F4F4F5",
-    padding: 10,
-    borderRadius: 8,
+  cardOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#000000",
   },
 
-  createSection: { paddingHorizontal: 16, marginBottom: 16 },
-  sectionTitle: { fontSize: 11, fontWeight: "600", color: "#A1A1AA", marginBottom: 14, letterSpacing: 2 },
-  createRow: { flexDirection: "row", gap: 12 },
-  input: {
-    flex: 1,
-    height: 48,
-    borderWidth: 1,
-    borderColor: "#EBEDF0",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    fontSize: 15,
-    backgroundColor: "#F7F8FA",
-  },
-  createBtn: {
-    backgroundColor: "#18181B",
-    borderRadius: 24,
-    width: 48,
-    height: 48,
+  /* Import button */
+  importSection: { paddingHorizontal: 20, marginBottom: 32 },
+  importBtnSlim: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "#18181B",
+    borderRadius: 100,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    width: "100%",
     shadowColor: "#18181B",
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
     shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
+    elevation: 3,
   },
-  createBtnText: { color: "#FFF", fontWeight: "600", fontSize: 22, marginTop: -2 },
-  disabled: { opacity: 0.5 },
-  list: { paddingHorizontal: 16, paddingBottom: 100 },
-  card: {
+  importBtnSlimText: { color: "#FFF", fontWeight: "600", fontSize: 14, letterSpacing: 0.5, marginLeft: 8 },
+
+  /* Section label */
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#A1A1AA",
+    paddingHorizontal: 20,
+    marginBottom: 14,
+    letterSpacing: 2,
+    textTransform: "uppercase",
+  },
+
+  /* Recent project card */
+  projectCard: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFF",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginHorizontal: 20,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: "#ECECEE",
-    minHeight: 80,
+    gap: 14,
   },
-  cardIcon: { width: 40, height: 40, borderRadius: 10, backgroundColor: "#F4F4F5", alignItems: "center", justifyContent: "center", marginRight: 12 },
-  cardContent: { flex: 1 },
-  cardTitle: { fontSize: 15, fontWeight: "600", color: "#18181B" },
-  cardDate: { fontSize: 12, color: "#A1A1AA", marginTop: 2 },
+  projectCardIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: "#F4F4F5",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  projectCardBody: { flex: 1, minWidth: 0 },
+  projectCardTitle: { fontSize: 15, fontWeight: "600", color: "#18181B" },
+  projectCardDesc: { fontSize: 12, color: "#A1A1AA", marginTop: 3 },
+  projectCardArrow: {},
 
-  emptyContainer: { alignItems: "center", marginTop: 60 },
-  empty: { fontSize: 15, fontWeight: "500", color: "#71717A" },
-  emptyHint: { fontSize: 13, color: "#A1A1AA", marginTop: 4 },
+  /* Empty */
+  emptyProjects: { alignItems: "center", paddingVertical: 56, paddingHorizontal: 20 },
+  emptyProjectsTitle: { fontSize: 15, fontWeight: "500", color: "#A1A1AA" },
+  emptyProjectsHint: { fontSize: 13, color: "#D4D4D8", marginTop: 4 },
+
+  disabled: { opacity: 0.5 },
 });

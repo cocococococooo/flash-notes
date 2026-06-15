@@ -1,16 +1,16 @@
 import os
 import json
 import logging
-from paddleocr import PaddleOCR
 
 logger = logging.getLogger(__name__)
 
 _ocr_instance = None
 
 
-def _get_ocr() -> PaddleOCR:
+def _get_ocr():
     global _ocr_instance
     if _ocr_instance is None:
+        from paddleocr import PaddleOCR
         _ocr_instance = PaddleOCR(
             use_angle_cls=True,
             lang="ch",

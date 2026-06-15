@@ -9,6 +9,10 @@ export default function RootLayout() {
         options={{ animation: "default" }}
       />
       <Stack.Screen
+        name="note-list/[id]"
+        options={{ animation: "default" }}
+      />
+      <Stack.Screen
         name="project/[id]"
         options={{ animation: "default" }}
       />

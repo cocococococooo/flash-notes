@@ -16,10 +16,11 @@ class Project(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(255), nullable=False)
+    isDefault = Column(Integer, default=0)
     createdAt = Column(DateTime, default=datetime.datetime.utcnow)
 
     images = relationship("Image", back_populates="project", cascade="all, delete-orphan")
-    note = relationship("Note", back_populates="project", uselist=False, cascade="all, delete-orphan")
+    notes = relationship("Note", back_populates="project", cascade="all, delete-orphan")
 
 
 class Image(Base):
@@ -27,7 +28,10 @@ class Image(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     projectId = Column(Integer, ForeignKey("projects.id"), nullable=False)
+    noteId = Column(Integer, ForeignKey("notes.id"), nullable=True)
     localUri = Column(String(512), nullable=False)
+    width = Column(Integer, default=0)
+    height = Column(Integer, default=0)
     ocrText = Column(Text, default="")
     aiSummary = Column(Text, default="")
     userSummary = Column(Text, default="")
@@ -35,18 +39,20 @@ class Image(Base):
     status = Column(String(20), default=ImageStatus.processing.value)
 
     project = relationship("Project", back_populates="images")
+    note = relationship("Note")
 
 
 class Note(Base):
     __tablename__ = "notes"
 
     id = Column(Integer, primary_key=True, index=True)
-    projectId = Column(Integer, ForeignKey("projects.id"), nullable=False, unique=True)
+    projectId = Column(Integer, ForeignKey("projects.id"), nullable=False)
+    title = Column(String(255), default="默认笔记")
     content = Column(Text, default="")
     tags = Column(Text, default="[]")
     updatedAt = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
-    project = relationship("Project", back_populates="note")
+    project = relationship("Project", back_populates="notes")
 
 
 class ShareLink(Base):

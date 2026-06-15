@@ -33,3 +33,18 @@ npm-debug.log*
 
 # Uploads
 backend/uploads/
+
+# Python
+backend/venv/
+backend/flash_notes.db
+
+# Android
+mobile/android/
+
+# APK
+*.apk
+
+# Misc
+expo-error.txt
+expo-output.txt
+build-apk-local.ps1
