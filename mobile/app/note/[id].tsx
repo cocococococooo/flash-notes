@@ -155,15 +155,21 @@ export default function NoteScreen() {
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const editableTitleInitialized = useRef(false);
 
-  const getImageHeight = useCallback(
-    (img: ImageItem) => {
+  const getImageSize = useCallback(
+    (img: ImageItem): { width: number; height: number } => {
       if (img.width > 0 && img.height > 0) {
         const ratio = img.height / img.width;
-        return Math.round(CARD_WIDTH * ratio);
+        let w = CARD_WIDTH;
+        let h = Math.round(CARD_WIDTH * ratio);
+        if (h > CARD_IMAGE_HEIGHT) {
+          h = CARD_IMAGE_HEIGHT;
+          w = Math.round(CARD_IMAGE_HEIGHT / ratio);
+        }
+        return { width: w, height: h };
       }
-      return CARD_IMAGE_HEIGHT;
+      return { width: CARD_WIDTH, height: CARD_IMAGE_HEIGHT };
     },
-    [CARD_WIDTH]
+    [CARD_WIDTH, CARD_IMAGE_HEIGHT]
   );
 
   useEffect(() => {
@@ -620,13 +626,13 @@ export default function NoteScreen() {
                           <TouchableOpacity
                             activeOpacity={0.95}
                             onPress={() => setPreviewIndex(i)}
-                            style={[styles.imageCarousel, { height: getImageHeight(img) }]}
+                            style={[styles.imageCarousel, { height: getImageSize(img).height }]}
                           >
                             <Image
                               source={{ uri: resolveImageUri(img.localUri) }}
                               style={{
-                                width: CARD_WIDTH,
-                                height: getImageHeight(img),
+                                width: getImageSize(img).width,
+                                height: getImageSize(img).height,
                               }}
                               resizeMode="contain"
                             />
@@ -1088,10 +1094,11 @@ const styles = StyleSheet.create({
   },
 
   imageCarousel: {
-    width: CARD_WIDTH,
     backgroundColor: "#E5E5E5",
     overflow: "hidden",
     position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
   },
   slideImage: { width: "100%", height: "100%" },
   fixedBadge: {

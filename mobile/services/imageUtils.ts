@@ -36,7 +36,7 @@ export async function pickImages(): Promise<string[]> {
   for (const asset of result.assets) {
     const compressed = await ImageManipulator.manipulateAsync(
       asset.uri,
-      [{ resize: { width: IMAGE_COMPRESS_MAX_WIDTH, height: IMAGE_COMPRESS_MAX_HEIGHT } }],
+      [],
       { compress: IMAGE_COMPRESS_QUALITY, format: ImageManipulator.SaveFormat.JPEG }
     );
     compressedUris.push(compressed.uri);
