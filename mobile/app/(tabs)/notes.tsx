@@ -98,7 +98,13 @@ export default function NotesScreen() {
       console.error("load notes error:", e);
     }
     try {
-      const projectsData = await api.listProjects();
+      const [projectsData, defaultProject] = await Promise.all([
+        api.listProjects(),
+        api.getDefaultProject().catch(() => null),
+      ]);
+      if (defaultProject && !projectsData.some((p) => p.id === defaultProject.id)) {
+        projectsData.unshift(defaultProject);
+      }
       setProjectsList(projectsData);
     } catch (e) {
       console.error("load projects error:", e);

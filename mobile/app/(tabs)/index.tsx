@@ -177,17 +177,9 @@ export default function HomeScreen() {
         setImporting(false);
         return;
       }
-      const noteData = await api.getNote(targetProjectId).catch(() => null);
-      let noteId: number;
-      let noteTitle: string;
-      if (noteData) {
-        noteId = noteData.id;
-        noteTitle = noteData.title || "默认笔记";
-      } else {
-        const created = await api.createNote(targetProjectId, "默认笔记", "", "[]");
-        noteId = created.id;
-        noteTitle = created.title || "默认笔记";
-      }
+      const created = await api.createNote(targetProjectId, "默认笔记", "", "[]");
+      const noteId = created.id;
+      const noteTitle = created.title || "默认笔记";
       await api.uploadImages(targetProjectId, uris, noteId);
       addRecentNote(noteId, targetProjectId, noteTitle, uris.length);
       startPolling(targetProjectId, noteId);
